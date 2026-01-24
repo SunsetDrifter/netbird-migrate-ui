@@ -13,9 +13,19 @@ import type {
   SourceResources,
   ResourceSelection,
   Conflict,
+  ConflictResolution,
   MigrationEvent,
   MigrationResult,
+  ResourceType,
 } from "@/lib/types";
+
+export interface ExportedConfig {
+  version: 1;
+  sourceUrl: string;
+  destinationUrl: string;
+  selection: ResourceSelection;
+  conflicts: { resourceType: ResourceType; sourceId: string; sourceName: string; destinationId: string; resolution: ConflictResolution }[];
+}
 
 interface MigrationState {
   source: ConnectionConfig | null;
@@ -28,6 +38,8 @@ interface MigrationState {
   events: MigrationEvent[];
   result: MigrationResult | null;
   migrating: boolean;
+  importedSourceUrl: string;
+  importedDestUrl: string;
 }
 
 interface MigrationActions {
@@ -42,6 +54,8 @@ interface MigrationActions {
   setResult: (result: MigrationResult) => void;
   setMigrating: (migrating: boolean) => void;
   reset: () => void;
+  exportConfig: () => ExportedConfig | null;
+  importConfig: (data: ExportedConfig) => void;
 }
 
 const defaultSelection: ResourceSelection = {
@@ -73,6 +87,8 @@ export function MigrationStateProvider({ children }: { children: ReactNode }) {
     events: [],
     result: null,
     migrating: false,
+    importedSourceUrl: "",
+    importedDestUrl: "",
   });
 
   const setSource = useCallback(
@@ -138,9 +154,44 @@ export function MigrationStateProvider({ children }: { children: ReactNode }) {
         events: [],
         result: null,
         migrating: false,
+        importedSourceUrl: "",
+        importedDestUrl: "",
       }),
     []
   );
+
+  const exportConfig = useCallback((): ExportedConfig | null => {
+    if (!state.source && !state.destination) return null;
+    return {
+      version: 1,
+      sourceUrl: state.source?.url || state.importedSourceUrl || "",
+      destinationUrl: state.destination?.url || state.importedDestUrl || "",
+      selection: state.selection,
+      conflicts: state.conflicts.map((c) => ({
+        resourceType: c.resourceType,
+        sourceId: c.sourceId,
+        sourceName: c.sourceName,
+        destinationId: c.destinationId,
+        resolution: c.resolution,
+      })),
+    };
+  }, [state.source, state.destination, state.importedSourceUrl, state.importedDestUrl, state.selection, state.conflicts]);
+
+  const importConfig = useCallback((data: ExportedConfig) => {
+    setState((s) => ({
+      ...s,
+      importedSourceUrl: data.sourceUrl,
+      importedDestUrl: data.destinationUrl,
+      selection: data.selection,
+      conflicts: data.conflicts.map((c) => ({
+        resourceType: c.resourceType,
+        sourceId: c.sourceId,
+        sourceName: c.sourceName,
+        destinationId: c.destinationId,
+        resolution: c.resolution,
+      })),
+    }));
+  }, []);
 
   const value = {
     ...state,
@@ -155,6 +206,8 @@ export function MigrationStateProvider({ children }: { children: ReactNode }) {
     setResult,
     setMigrating,
     reset,
+    exportConfig,
+    importConfig,
   };
 
   return React.createElement(
