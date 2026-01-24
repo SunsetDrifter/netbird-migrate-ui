@@ -80,7 +80,7 @@ export default function ConnectPage() {
       <div className="grid gap-6 md:grid-cols-2">
         <ConnectionForm
           label="Source Instance"
-          defaultUrl=""
+          defaultUrl="https://api.netbird.io/api"
           connected={sourceConnected}
           onConnect={handleSourceConnect}
           onDisconnect={handleSourceDisconnect}
