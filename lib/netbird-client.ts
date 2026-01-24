@@ -58,14 +58,33 @@ export class NetBirdClient {
 
     if (!res.ok) {
       const text = await res.text();
-      let message = `API error ${res.status}`;
+      let detail = `API error ${res.status}`;
       try {
         const err = JSON.parse(text);
-        message = err.message || message;
+        detail = err.message || detail;
       } catch {
-        if (text) message = text;
+        if (text) detail = text;
       }
-      throw new Error(message);
+      console.error(`NetBird API error: ${res.status} ${method} ${endpoint}: ${detail}`);
+
+      let clientMessage: string;
+      switch (res.status) {
+        case 401:
+        case 403:
+          clientMessage = "Authentication failed";
+          break;
+        case 404:
+          clientMessage = "Resource not found";
+          break;
+        case 429:
+          clientMessage = "Rate limited by NetBird API";
+          break;
+        default:
+          clientMessage = res.status >= 500
+            ? "NetBird API server error"
+            : `Request failed (${res.status})`;
+      }
+      throw new Error(clientMessage);
     }
 
     if (res.status === 204) return {} as T;

@@ -5,41 +5,8 @@ import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/step-indicator";
 import { ResourceList } from "@/components/resource-list";
 import { useMigrationState } from "@/hooks/use-migration-state";
+import { buildAutoSelection } from "@/lib/build-auto-selection";
 import type { ResourceSelection, SourceResources } from "@/lib/types";
-
-function buildAutoSelection(data: SourceResources): ResourceSelection {
-  const authSettingIds: string[] = [];
-  if (data.account_settings) {
-    const s = data.account_settings;
-    if (s.peer_login_expiration_enabled !== undefined) authSettingIds.push("peer_login_expiration");
-    if (s.peer_inactivity_expiration_enabled !== undefined) authSettingIds.push("peer_inactivity_expiration");
-    if (s.extra?.peer_approval_enabled !== undefined) authSettingIds.push("peer_approval");
-    if (s.extra?.user_approval_required !== undefined) authSettingIds.push("user_approval");
-    if (s.dns_domain) authSettingIds.push("dns_domain");
-    if (s.network_range) authSettingIds.push("network_range");
-    if (s.auto_update_version !== undefined) authSettingIds.push("auto_update_version");
-    if (s.lazy_connection_enabled !== undefined) authSettingIds.push("lazy_connection_enabled");
-  }
-
-  return {
-    groups: data.groups
-      .filter((g) => g.name.toLowerCase() !== "all")
-      .map((g) => g.id),
-    posture_checks: data.posture_checks.map((p) => p.id),
-    policies: data.policies.map((p) => p.id),
-    routes: data.routes.map((r) => r.id),
-    dns: data.dns.map((d) => d.id),
-    dns_zones: (data.dns_zones || []).map((z) => z.id),
-    dns_settings: data.dns_settings?.disabled_management_groups?.length
-      ? ["disabled_management_groups"]
-      : [],
-    networks: data.networks.map((n) => n.id),
-    setup_keys: data.setup_keys
-      .filter((k) => k.valid && !k.revoked)
-      .map((k) => k.id),
-    account_settings: authSettingIds,
-  };
-}
 
 export default function SelectPage() {
   const router = useRouter();
@@ -107,7 +74,7 @@ export default function SelectPage() {
   }, [source, setResources, setSelection]);
 
   useEffect(() => {
-    if (!sourceConnected || !destConnected) {
+    if ((!sourceConnected && !resources) || !destConnected) {
       router.push("/");
       return;
     }
@@ -165,18 +132,20 @@ export default function SelectPage() {
     <div>
       <StepIndicator currentStep={2} />
 
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={() => fetchResources({ preserveSelection: true })}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm text-nb-gray-300 hover:text-nb-gray-100 border border-nb-gray-700 rounded-md hover:border-nb-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <svg className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          {refreshing ? "Refreshing..." : "Refresh"}
-        </button>
-      </div>
+      {sourceConnected && (
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={() => fetchResources({ preserveSelection: true })}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-nb-gray-300 hover:text-nb-gray-100 border border-nb-gray-700 rounded-md hover:border-nb-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
+      )}
 
       <div className="space-y-4">
         <ResourceList

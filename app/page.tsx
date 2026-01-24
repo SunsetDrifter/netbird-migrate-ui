@@ -5,12 +5,17 @@ import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/step-indicator";
 import { ConnectionForm } from "@/components/connection-form";
 import { useMigrationState, type ExportedConfig } from "@/hooks/use-migration-state";
+import { buildAutoSelection } from "@/lib/build-auto-selection";
+import type { SourceResources } from "@/lib/types";
 
 export default function ConnectPage() {
   const router = useRouter();
   const {
+    source,
+    destination,
     sourceConnected,
     destConnected,
+    resources,
     importedSourceUrl,
     importedDestUrl,
     setSource,
@@ -19,11 +24,11 @@ export default function ConnectPage() {
     setDestConnected,
     setResources,
     setSelection,
-    exportConfig,
     importConfig,
   } = useMigrationState();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState("");
+  const [exporting, setExporting] = useState(false);
   const [pendingImport, setPendingImport] = useState<ExportedConfig | null>(null);
   const [appliedImport, setAppliedImport] = useState<ExportedConfig | null>(null);
 
@@ -82,22 +87,52 @@ export default function ConnectPage() {
     setDestConnected(true);
   };
 
-  const handleExport = () => {
-    const config = exportConfig();
-    if (!config) return;
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "netbird-migration-config.json";
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleExport = async () => {
+    if (!source) return;
+    setExporting(true);
+    try {
+      const res = await fetch("/api/resources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: source.token, url: source.url }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to fetch resources");
+      }
+      const data = (await res.json()) as SourceResources;
+      const autoSelection = buildAutoSelection(data);
+      const config: ExportedConfig = {
+        version: 1,
+        sourceUrl: source.url,
+        destinationUrl: destination?.url || "",
+        selection: autoSelection,
+        conflicts: [],
+        resources: data,
+      };
+      const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = "netbird-migration-config.json";
+      a.click();
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      // Fetch failed silently — button re-enables
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     setImportError("");
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5242880) {
+      setImportError("Config file too large (max 5MB)");
+      e.target.value = "";
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       try {
@@ -131,7 +166,7 @@ export default function ConnectPage() {
   };
 
   const canExport = sourceConnected;
-  const canProceed = sourceConnected && destConnected;
+  const canProceed = (sourceConnected || !!resources) && destConnected;
 
   return (
     <div>
@@ -160,10 +195,10 @@ export default function ConnectPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={handleExport}
-            disabled={!canExport}
+            disabled={!canExport || exporting}
             className="px-4 py-2 border border-nb-gray-700 text-nb-gray-200 text-sm font-medium rounded-md hover:bg-nb-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Export Config
+            {exporting ? "Fetching..." : "Fetch & Export"}
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}

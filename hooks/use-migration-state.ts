@@ -25,6 +25,7 @@ export interface ExportedConfig {
   destinationUrl: string;
   selection: ResourceSelection;
   conflicts: { resourceType: ResourceType; sourceId: string; sourceName: string; destinationId: string; resolution: ConflictResolution }[];
+  resources?: SourceResources;
 }
 
 interface MigrationState {
@@ -190,6 +191,7 @@ export function MigrationStateProvider({ children }: { children: ReactNode }) {
         destinationId: c.destinationId,
         resolution: c.resolution,
       })),
+      ...(data.resources ? { resources: data.resources } : {}),
     }));
   }, []);
 

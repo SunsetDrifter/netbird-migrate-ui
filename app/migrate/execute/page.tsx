@@ -115,7 +115,7 @@ export default function ExecutePage() {
   }, [destination, resources, selection, setConflicts]);
 
   useEffect(() => {
-    if (!sourceConnected || !destConnected) {
+    if ((!sourceConnected && !resources) || !destConnected) {
       router.push("/");
       return;
     }
@@ -135,7 +135,7 @@ export default function ExecutePage() {
   };
 
   const executeMigration = async () => {
-    if (!source || !destination || !resources) return;
+    if (!destination || !resources) return;
 
     setMigrating(true);
     setError("");
@@ -145,8 +145,8 @@ export default function ExecutePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sourceToken: source.token,
-          sourceUrl: source.url,
+          sourceToken: source?.token || "",
+          sourceUrl: source?.url || "",
           destToken: destination.token,
           destUrl: destination.url,
           resources,
