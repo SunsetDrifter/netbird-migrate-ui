@@ -20,12 +20,23 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Usage
 
-The app is a multi-step wizard:
+The app supports two migration modes:
+
+### Option 1: Direct Migration
 
 1. **Connect** — Enter API tokens for your source and destination NetBird accounts
 2. **Select Resources** — Choose which resources to migrate
 3. **Resolve Conflicts** — For resources that exist in both accounts (matched by name), choose to skip or overwrite
 4. **Execute** — Run the migration with live progress updates via SSE
+
+### Option 2: Export/Import (Ideal for Self-Hosted)
+
+1. **Connect** to your source instance and click **Fetch & Export** to save the configuration to a JSON file
+2. Transfer the file to a machine with access to your destination instance
+3. **Connect** to your destination instance and click **Import Config** to load the saved configuration
+4. **Select Resources**, resolve conflicts, and execute as above
+
+This mode is ideal for self-hosted NetBird deployments where source and destination may not be accessible from the same network.
 
 ## Supported Resources
 
@@ -40,6 +51,16 @@ Resources are migrated in dependency order:
 7. Networks
 8. Setup Keys
 9. Account Settings
+
+## Limitations
+
+This tool migrates configuration only. The following are **not transferred**:
+
+- **Peers** — must re-register on destination
+- **Users** — managed via your identity provider
+- **Group memberships** — groups are created empty
+- **Setup key secrets** — new keys are generated, must redistribute
+- **Personal Access Tokens** — must be recreated manually
 
 ## Architecture
 
