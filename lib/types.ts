@@ -176,6 +176,7 @@ export interface AccountSettings {
   extra?: AccountSettingsExtra;
   dns_domain?: string;
   network_range?: string;
+  routing_peer_dns_resolution_enabled?: boolean;
   auto_update_version?: string;
   lazy_connection_enabled?: boolean;
 }

@@ -123,7 +123,7 @@ export class MigrationEngine {
 
   private isAlreadyExistsError(err: unknown): boolean {
     const msg = err instanceof Error ? err.message : String(err);
-    return /already exist|already has/i.test(msg);
+    return /already exist|already has|\(409\)/i.test(msg);
   }
 
   private async migrateGroups(
@@ -956,6 +956,11 @@ export class MigrationEngine {
       if (selectedIds.includes("network_range") && src.network_range) {
         merged.network_range = src.network_range;
         appliedSettings.push(`network range: ${src.network_range}`);
+      }
+
+      if (selectedIds.includes("routing_peer_dns_resolution_enabled") && src.routing_peer_dns_resolution_enabled !== undefined) {
+        merged.routing_peer_dns_resolution_enabled = src.routing_peer_dns_resolution_enabled;
+        appliedSettings.push(src.routing_peer_dns_resolution_enabled ? "DNS wildcard routing enabled" : "DNS wildcard routing disabled");
       }
 
       if (selectedIds.includes("peer_approval") || selectedIds.includes("user_approval")) {

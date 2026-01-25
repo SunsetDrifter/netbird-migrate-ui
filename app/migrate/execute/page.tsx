@@ -32,6 +32,7 @@ export default function ExecutePage() {
     addEvent,
     setResult,
     setMigrating,
+    reset,
   } = useMigrationState();
 
   const [loadingConflicts, setLoadingConflicts] = useState(true);
@@ -198,6 +199,11 @@ export default function ExecutePage() {
     }
   };
 
+  const handleStartNewMigration = () => {
+    reset();
+    router.push("/");
+  };
+
   if (loadingConflicts) {
     return (
       <div>
@@ -257,7 +263,7 @@ export default function ExecutePage() {
         {result && (
           <div className="flex justify-center">
             <button
-              onClick={() => router.push("/")}
+              onClick={handleStartNewMigration}
               className="px-6 py-2 bg-netbird-400 text-white text-sm font-medium rounded-md hover:bg-netbird-500"
             >
               Start New Migration

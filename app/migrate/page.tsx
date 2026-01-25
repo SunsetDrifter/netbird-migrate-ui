@@ -316,6 +316,13 @@ export default function SelectPage() {
               subtitle: s.network_range,
             });
           }
+          if (s.routing_peer_dns_resolution_enabled !== undefined) {
+            items.push({
+              id: "routing_peer_dns_resolution_enabled",
+              name: "DNS Wildcard Routing",
+              subtitle: s.routing_peer_dns_resolution_enabled ? "Enabled" : "Disabled",
+            });
+          }
           if (items.length === 0) return null;
           return (
             <ResourceList

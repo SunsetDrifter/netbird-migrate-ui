@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/step-indicator";
 import { ConnectionForm } from "@/components/connection-form";
+import { ImportModal } from "@/components/import-modal";
 import { useMigrationState, type ExportedConfig } from "@/hooks/use-migration-state";
 import { buildAutoSelection } from "@/lib/build-auto-selection";
 import type { SourceResources } from "@/lib/types";
@@ -26,11 +27,10 @@ export default function ConnectPage() {
     setSelection,
     importConfig,
   } = useMigrationState();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [importError, setImportError] = useState("");
   const [exporting, setExporting] = useState(false);
-  const [pendingImport, setPendingImport] = useState<ExportedConfig | null>(null);
-  const [appliedImport, setAppliedImport] = useState<ExportedConfig | null>(null);
+  const [showLimitations, setShowLimitations] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importApplied, setImportApplied] = useState(false);
 
   const handleSourceConnect = async (token: string, url: string) => {
     const res = await fetch("/api/connect", {
@@ -72,6 +72,10 @@ export default function ConnectPage() {
   };
 
   const handleDestConnect = async (token: string, url: string) => {
+    if (source && token === source.token && url === source.url) {
+      throw new Error("Destination cannot be the same as source");
+    }
+
     const res = await fetch("/api/connect", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -124,45 +128,9 @@ export default function ConnectPage() {
     }
   };
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setImportError("");
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5242880) {
-      setImportError("Config file too large (max 5MB)");
-      e.target.value = "";
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const data = JSON.parse(reader.result as string) as ExportedConfig;
-        if (data.version !== 1 || typeof data.sourceUrl !== "string" || typeof data.destinationUrl !== "string") {
-          throw new Error("Invalid config file format");
-        }
-        setPendingImport(data);
-      } catch (err) {
-        setImportError(err instanceof Error ? err.message : "Failed to parse config file");
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  };
-
-  const handleConfirmImport = () => {
-    if (pendingImport) {
-      importConfig(pendingImport);
-      setAppliedImport(pendingImport);
-      setPendingImport(null);
-    }
-  };
-
-  const handleCancelImport = () => {
-    setPendingImport(null);
-  };
-
-  const handleDismissApplied = () => {
-    setAppliedImport(null);
+  const handleImportComplete = (config: ExportedConfig) => {
+    importConfig(config);
+    setImportApplied(true);
   };
 
   const canExport = sourceConnected;
@@ -180,6 +148,15 @@ export default function ConnectPage() {
           connected={sourceConnected}
           onConnect={handleSourceConnect}
           onDisconnect={handleSourceDisconnect}
+          actionButton={
+            <button
+              onClick={handleExport}
+              disabled={!canExport || exporting}
+              className="w-full px-4 py-2 border border-nb-gray-700 text-nb-gray-200 text-sm font-medium rounded-md hover:bg-nb-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {exporting ? "Fetching..." : "Fetch & Export"}
+            </button>
+          }
         />
         <ConnectionForm
           key={`dest-${importedDestUrl}`}
@@ -188,36 +165,79 @@ export default function ConnectPage() {
           connected={destConnected}
           onConnect={handleDestConnect}
           onDisconnect={handleDestDisconnect}
+          actionButton={
+            <button
+              onClick={() => setImportModalOpen(true)}
+              className="w-full px-4 py-2 border border-nb-gray-700 text-nb-gray-200 text-sm font-medium rounded-md hover:bg-nb-gray-800"
+            >
+              Import Config
+            </button>
+          }
         />
       </div>
 
-      <div className="mt-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleExport}
-            disabled={!canExport || exporting}
-            className="px-4 py-2 border border-nb-gray-700 text-nb-gray-200 text-sm font-medium rounded-md hover:bg-nb-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {exporting ? "Fetching..." : "Fetch & Export"}
-          </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="px-4 py-2 border border-nb-gray-700 text-nb-gray-200 text-sm font-medium rounded-md hover:bg-nb-gray-800"
-          >
-            Import Config
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            onChange={handleImport}
-            className="hidden"
-          />
-          {importError && (
-            <span className="text-sm text-red-400">{importError}</span>
-          )}
-        </div>
+      <div className="mt-6 p-4 border border-nb-gray-800 rounded-lg bg-nb-gray-920/50">
+        <p className="text-sm text-nb-gray-300">
+          <span className="text-nb-gray-100 font-medium">Option 1:</span> Connect both instances above, then select resources and migrate directly.
+        </p>
+        <p className="text-sm text-nb-gray-300 mt-2">
+          <span className="text-nb-gray-100 font-medium">Option 2:</span> Use <span className="text-nb-gray-200">Fetch & Export</span> to save source config to a file, then <span className="text-nb-gray-200">Import Config</span> on a destination instance. Ideal for self-hosted deployments.
+        </p>
+      </div>
 
+      <div className="mt-4 border border-nb-gray-800 rounded-lg bg-nb-gray-920/50">
+        <button
+          onClick={() => setShowLimitations(!showLimitations)}
+          className="flex items-center justify-between w-full p-4 text-left"
+        >
+          <h4 className="text-sm font-medium text-netbird-400">Migration Limitations</h4>
+          <svg
+            className={`w-4 h-4 text-nb-gray-300 transition-transform ${showLimitations ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {showLimitations && (
+          <div className="px-4 pb-4">
+            <p className="text-sm text-nb-gray-300 mb-2">
+              This tool migrates configuration only. The following are <span className="text-netbird-400">not transferred</span>:
+            </p>
+            <ul className="text-sm text-nb-gray-300 space-y-1 list-disc list-inside">
+              <li><span className="text-nb-gray-100">Peers</span> — must re-register on destination</li>
+              <li><span className="text-nb-gray-100">Users</span> — managed via your identity provider</li>
+              <li><span className="text-nb-gray-100">Group memberships</span> — groups are created empty</li>
+              <li><span className="text-nb-gray-100">Setup key secrets</span> — new keys generated, must redistribute</li>
+              <li><span className="text-nb-gray-100">Personal Access Tokens</span> — must be recreated manually</li>
+              <li><span className="text-nb-gray-100">Restrict dashboard for regular users</span> — Settings → Permissions</li>
+              <li><span className="text-nb-gray-100">User group propagation</span> — Settings → Groups</li>
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {importApplied && (
+        <div className="mt-6 border border-green-800 rounded-lg p-4 bg-nb-gray-920 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="text-sm text-green-400 font-medium">Configuration imported successfully</span>
+          </div>
+          <button
+            onClick={() => setImportApplied(false)}
+            className="text-nb-gray-400 hover:text-nb-gray-200 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      <div className="mt-6 flex justify-end">
         {canProceed && (
           <button
             onClick={() => router.push("/migrate")}
@@ -228,99 +248,13 @@ export default function ConnectPage() {
         )}
       </div>
 
-      {pendingImport && (
-        <div className="mt-6 border border-nb-gray-800 rounded-lg p-6 bg-nb-gray-920">
-          <h3 className="text-sm font-medium text-nb-gray-100 mb-4">Import Summary</h3>
-          <div className="space-y-2 text-sm text-nb-gray-300">
-            <p><span className="text-nb-gray-400">Source:</span> {pendingImport.sourceUrl || "—"}</p>
-            <p><span className="text-nb-gray-400">Destination:</span> {pendingImport.destinationUrl || "—"}</p>
-
-            {Object.entries(pendingImport.selection).some(([, ids]) => ids.length > 0) && (
-              <div className="pt-2">
-                <p className="text-nb-gray-400 mb-1">Selections:</p>
-                <ul className="list-none space-y-0.5 pl-2">
-                  {Object.entries(pendingImport.selection)
-                    .filter(([, ids]) => ids.length > 0)
-                    .map(([type, ids]) => (
-                      <li key={type}>{type.replace(/_/g, " ")}: {ids.length}</li>
-                    ))}
-                </ul>
-              </div>
-            )}
-
-            {pendingImport.conflicts.length > 0 && (
-              <div className="pt-2">
-                <p className="text-nb-gray-400 mb-1">
-                  Conflicts: {pendingImport.conflicts.length} ({pendingImport.conflicts.filter(c => c.resolution === "skip").length} skip, {pendingImport.conflicts.filter(c => c.resolution === "overwrite").length} overwrite)
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-4 flex gap-3">
-            <button
-              onClick={handleConfirmImport}
-              className="px-4 py-2 bg-netbird-400 text-white text-sm font-medium rounded-md hover:bg-netbird-500"
-            >
-              Apply
-            </button>
-            <button
-              onClick={handleCancelImport}
-              className="px-4 py-2 border border-nb-gray-700 text-nb-gray-200 text-sm font-medium rounded-md hover:bg-nb-gray-800"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {appliedImport && !pendingImport && (
-        <div className="mt-6 border border-green-800 rounded-lg p-6 bg-nb-gray-920">
-          <h3 className="text-sm font-medium text-green-400 mb-4">Config Imported</h3>
-          <div className="space-y-2 text-sm text-nb-gray-300">
-            <p><span className="text-nb-gray-400">Source:</span> {appliedImport.sourceUrl || "—"}</p>
-            <p><span className="text-nb-gray-400">Destination:</span> {appliedImport.destinationUrl || "—"}</p>
-
-            {Object.entries(appliedImport.selection).some(([, ids]) => ids.length > 0) && (
-              <div className="pt-2">
-                <p className="text-nb-gray-400 mb-1">Selections:</p>
-                <ul className="list-none space-y-0.5 pl-2">
-                  {Object.entries(appliedImport.selection)
-                    .filter(([, ids]) => ids.length > 0)
-                    .map(([type, ids]) => (
-                      <li key={type}>{type.replace(/_/g, " ")}: {ids.length}</li>
-                    ))}
-                </ul>
-              </div>
-            )}
-
-            {appliedImport.conflicts.length > 0 && (
-              <div className="pt-2">
-                <p className="text-nb-gray-400 mb-1">
-                  Conflicts: {appliedImport.conflicts.length} ({appliedImport.conflicts.filter(c => c.resolution === "skip").length} skip, {appliedImport.conflicts.filter(c => c.resolution === "overwrite").length} overwrite)
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-4 flex gap-3">
-            {destConnected && (
-              <button
-                onClick={() => importConfig(appliedImport!)}
-                className="px-4 py-2 bg-netbird-400 text-white text-sm font-medium rounded-md hover:bg-netbird-500"
-              >
-                Re-apply Config
-              </button>
-            )}
-            <button
-              onClick={handleDismissApplied}
-              className="px-4 py-2 border border-nb-gray-700 text-nb-gray-200 text-sm font-medium rounded-md hover:bg-nb-gray-800"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
+      <ImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImport={handleImportComplete}
+        destination={destination}
+        destConnected={destConnected}
+      />
     </div>
   );
 }

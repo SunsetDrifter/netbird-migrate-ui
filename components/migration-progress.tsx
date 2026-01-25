@@ -40,7 +40,7 @@ export function MigrationProgress({ events, migrating }: MigrationProgressProps)
         {events.length > 0 && (
           <button
             onClick={copyLog}
-            className="ml-auto p-1 text-nb-gray-400 hover:text-nb-gray-100 transition-colors"
+            className="ml-auto p-1 text-netbird-400 hover:text-netbird-300 transition-colors"
             title="Copy log to clipboard"
           >
             {copied ? (
@@ -59,7 +59,10 @@ export function MigrationProgress({ events, migrating }: MigrationProgressProps)
         {events.length === 0 && (
           <p className="text-nb-gray-500">Waiting for migration to start...</p>
         )}
-        {events.map((event, i) => (
+        {[...events].sort((a, b) => {
+          const order = { progress: 0, success: 1, error: 2, complete: 3 };
+          return (order[a.type] ?? 1) - (order[b.type] ?? 1);
+        }).map((event, i) => (
           <div
             key={i}
             className={`flex items-start gap-2 ${

@@ -410,7 +410,7 @@ export class NetBirdClient {
 
   // Fetch all resources for migration
   async getAllResources(): Promise<SourceResources> {
-    const [groups, posture_checks, policies, routes, dns, dns_zones, networks, setup_keys, dns_settings, accounts] =
+    const [groups, posture_checks, policies, routes, dns, dns_zones, networksBasic, setup_keys, dns_settings, accounts] =
       await Promise.all([
         this.getGroups(),
         this.getPostureChecks().catch(() => [] as PostureCheck[]),
@@ -424,6 +424,23 @@ export class NetBirdClient {
         this.getAccounts().catch(() => undefined),
       ]);
 
+    // Enrich networks with full resource and router objects
+    // The list endpoint only returns IDs, but we need full objects for export/import
+    const networks = await Promise.all(
+      networksBasic.map(async (network) => {
+        try {
+          const [resources, routers] = await Promise.all([
+            this.getNetworkResources(network.id),
+            this.getNetworkRouters(network.id),
+          ]);
+          return { ...network, resources, routers };
+        } catch {
+          // If sub-resource fetch fails, keep original data
+          return network;
+        }
+      })
+    );
+
     // Extract auth-relevant settings from the first account
     let account_settings: AccountSettings | undefined;
     if (accounts && accounts.length > 0) {
@@ -436,6 +453,7 @@ export class NetBirdClient {
         extra: s.extra as AccountSettings["extra"],
         dns_domain: s.dns_domain as string | undefined,
         network_range: s.network_range as string | undefined,
+        routing_peer_dns_resolution_enabled: s.routing_peer_dns_resolution_enabled as boolean | undefined,
         auto_update_version: s.auto_update_version as string | undefined,
         lazy_connection_enabled: s.lazy_connection_enabled as boolean | undefined,
       };

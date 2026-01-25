@@ -8,6 +8,8 @@ interface ConnectionFormProps {
   connected: boolean;
   onConnect: (token: string, url: string) => Promise<void>;
   onDisconnect?: () => void;
+  actionButton?: React.ReactNode;
+  actionError?: string;
 }
 
 export function ConnectionForm({
@@ -16,6 +18,8 @@ export function ConnectionForm({
   connected,
   onConnect,
   onDisconnect,
+  actionButton,
+  actionError,
 }: ConnectionFormProps) {
   const [token, setToken] = useState("");
   const [url, setUrl] = useState(defaultUrl);
@@ -109,6 +113,15 @@ export function ConnectionForm({
           </button>
         )}
       </form>
+
+      {actionButton && (
+        <div className="mt-4 pt-4 border-t border-nb-gray-800">
+          {actionButton}
+          {actionError && (
+            <p className="mt-2 text-sm text-red-400">{actionError}</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
