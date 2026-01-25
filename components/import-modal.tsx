@@ -31,7 +31,7 @@ const stepLabels: { key: ImportStep; label: string }[] = [
   { key: "load", label: "Load" },
   { key: "validate", label: "Validate" },
   { key: "preview", label: "Preview" },
-  { key: "apply", label: "Apply" },
+  { key: "apply", label: "Continue" },
 ];
 
 const resourceTypeLabels: Record<keyof SourceResources, string> = {
@@ -263,8 +263,9 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
 
       // Routes
       for (const src of srcRes.routes || []) {
+        if (!src.name) continue;
         const dest = destResources.routes?.find(
-          (d) => d.name.toLowerCase() === src.name.toLowerCase()
+          (d) => d.name?.toLowerCase() === src.name.toLowerCase()
         );
         const existingConflict = config.conflicts?.find(
           (c) => c.resourceType === "routes" && c.sourceId === src.id
@@ -280,8 +281,9 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
 
       // DNS Nameservers
       for (const src of srcRes.dns || []) {
+        if (!src.name) continue;
         const dest = destResources.dns?.find(
-          (d) => d.name.toLowerCase() === src.name.toLowerCase()
+          (d) => d.name?.toLowerCase() === src.name.toLowerCase()
         );
         const existingConflict = config.conflicts?.find(
           (c) => c.resourceType === "dns" && c.sourceId === src.id
@@ -297,8 +299,9 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
 
       // DNS Zones
       for (const src of srcRes.dns_zones || []) {
+        if (!src.name) continue;
         const dest = destResources.dns_zones?.find(
-          (d) => d.name.toLowerCase() === src.name.toLowerCase()
+          (d) => d.name?.toLowerCase() === src.name.toLowerCase()
         );
         const existingConflict = config.conflicts?.find(
           (c) => c.resourceType === "dns_zones" && c.sourceId === src.id
@@ -314,8 +317,9 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
 
       // Networks
       for (const src of srcRes.networks || []) {
+        if (!src.name) continue;
         const dest = destResources.networks?.find(
-          (d) => d.name.toLowerCase() === src.name.toLowerCase()
+          (d) => d.name?.toLowerCase() === src.name.toLowerCase()
         );
         const existingConflict = config.conflicts?.find(
           (c) => c.resourceType === "networks" && c.sourceId === src.id
@@ -326,20 +330,6 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
           sourceName: src.name,
           destinationId: dest?.id,
           status: dest ? (existingConflict?.resolution === "overwrite" ? "overwrite" : "skip") : "create",
-        });
-      }
-
-      // Setup keys
-      for (const src of srcRes.setup_keys || []) {
-        const dest = destResources.setup_keys?.find(
-          (d) => d.name.toLowerCase() === src.name.toLowerCase()
-        );
-        items.push({
-          resourceType: "setup_keys",
-          sourceId: src.id,
-          sourceName: src.name,
-          destinationId: dest?.id,
-          status: dest ? "skip" : "create",
         });
       }
 
@@ -427,7 +417,7 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-2xl max-h-[90vh] bg-nb-gray-920 border border-nb-gray-800 rounded-lg shadow-xl flex flex-col">
+      <div className="w-full max-w-2xl max-h-[80vh] bg-nb-gray-920 border border-nb-gray-800 rounded-lg shadow-xl flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-nb-gray-800">
           <h2 className="text-lg font-semibold text-nb-gray-100">Import Configuration</h2>
@@ -442,7 +432,7 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
         </div>
 
         {/* Step Indicator */}
-        <div className="flex items-center justify-center gap-2 px-6 py-4 border-b border-nb-gray-800 bg-nb-gray-900/50">
+        <div className="flex items-center justify-center gap-2 px-6 py-3 border-b border-nb-gray-800 bg-nb-gray-900/50">
           {stepLabels.map((s, i) => (
             <div key={s.key} className="flex items-center gap-2">
               <div
@@ -477,7 +467,7 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-6 py-3">
           {/* Step 1: Load */}
           {step === "load" && (
             <div className="space-y-4">
@@ -531,9 +521,9 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
 
           {/* Step 2: Validate */}
           {step === "validate" && config && (
-            <div className="space-y-4">
-              <div className="p-4 bg-nb-gray-900 rounded-lg border border-nb-gray-800">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="space-y-3">
+              <div className="p-3 bg-nb-gray-900 rounded-lg border border-nb-gray-800">
+                <div className="grid grid-cols-2 gap-3 text-xs">
                   <div>
                     <span className="text-nb-gray-500">Source:</span>
                     <p className="text-nb-gray-200 truncate">{config.sourceUrl || "—"}</p>
@@ -559,8 +549,9 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
               </div>
 
               {config.resources && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-nb-gray-200">Resources to Import</h4>
+                <div className="space-y-1">
+                  <h4 className="text-xs font-medium text-nb-gray-200">Resources to Import</h4>
+                  <div className="max-h-44 overflow-y-auto space-y-0.5">
                   {(Object.keys(resourceTypeLabels) as (keyof SourceResources)[])
                     .filter((key) => key !== "setup_keys")
                     .map((key) => {
@@ -576,9 +567,9 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
                       <div key={key} className="border border-nb-gray-800 rounded-lg overflow-hidden">
                         <button
                           onClick={() => toggleSection(key)}
-                          className="flex items-center justify-between w-full px-4 py-2 text-left bg-nb-gray-900 hover:bg-nb-gray-850 transition-colors"
+                          className="flex items-center justify-between w-full px-3 py-1.5 text-left bg-nb-gray-900 hover:bg-nb-gray-850 transition-colors"
                         >
-                          <span className="text-sm text-nb-gray-200">
+                          <span className="text-xs text-nb-gray-200">
                             {resourceTypeLabels[key]} ({count})
                           </span>
                           <svg
@@ -591,7 +582,7 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
                           </svg>
                         </button>
                         {isExpanded && isArray && (
-                          <div className="px-4 py-2 space-y-1 bg-nb-gray-950 max-h-40 overflow-y-auto">
+                          <div className="px-4 py-2 space-y-1 bg-nb-gray-950 max-h-24 overflow-y-auto">
                             {(items as { name: string; id: string }[]).map((item) => (
                               <div key={item.id} className="text-sm text-nb-gray-300 flex items-center gap-2">
                                 <span className="text-nb-gray-500">•</span>
@@ -642,39 +633,31 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
                       </div>
                     );
                   })}
+                  </div>
                 </div>
               )}
 
               {/* Not Migrated Section */}
               {config.resources && (
-                <div className="mt-4 p-3 bg-nb-gray-900/50 rounded-lg border border-amber-500/30">
-                  <h4 className="text-sm font-medium text-amber-400 mb-2">Not Migrated</h4>
-                  <ul className="text-sm text-nb-gray-300 space-y-1.5">
+                <div className="mt-3 p-2 bg-nb-gray-900/50 rounded-lg border border-amber-500/30">
+                  <h4 className="text-xs font-medium text-amber-400 mb-1">Not Migrated</h4>
+                  <ul className="text-xs text-nb-gray-300 space-y-0.5">
                     {config.resources.setup_keys && config.resources.setup_keys.length > 0 && (
-                      <li className="flex items-start gap-2">
+                      <li className="flex items-center gap-1">
                         <span className="text-amber-500">•</span>
-                        <span>
-                          <span className="text-nb-gray-200">Setup Keys</span>
-                          <span className="text-nb-gray-500"> — new keys generated, must redistribute</span>
-                          <span className="text-nb-gray-500 text-xs block">
-                            ({config.resources.setup_keys.map((k) => k.name).join(", ")})
-                          </span>
-                        </span>
+                        <span className="text-nb-gray-200">Setup Keys</span>
+                        <span className="text-nb-gray-500">— must redistribute ({config.resources.setup_keys.length})</span>
                       </li>
                     )}
-                    <li className="flex items-start gap-2">
+                    <li className="flex items-center gap-1">
                       <span className="text-amber-500">•</span>
-                      <span>
-                        <span className="text-nb-gray-200">Dashboard restrictions</span>
-                        <span className="text-nb-gray-500"> — Settings → Permissions</span>
-                      </span>
+                      <span className="text-nb-gray-200">Dashboard restrictions</span>
+                      <span className="text-nb-gray-500">— Settings → Permissions</span>
                     </li>
-                    <li className="flex items-start gap-2">
+                    <li className="flex items-center gap-1">
                       <span className="text-amber-500">•</span>
-                      <span>
-                        <span className="text-nb-gray-200">User group propagation</span>
-                        <span className="text-nb-gray-500"> — Settings → Groups</span>
-                      </span>
+                      <span className="text-nb-gray-200">User group propagation</span>
+                      <span className="text-nb-gray-500">— Settings → Groups</span>
                     </li>
                   </ul>
                 </div>
@@ -792,7 +775,7 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
             </div>
           )}
 
-          {/* Step 4: Apply */}
+          {/* Step 4: Continue */}
           {step === "apply" && config && (
             <div className="space-y-4">
               <div className="p-4 bg-nb-gray-900 rounded-lg border border-nb-gray-800">
@@ -849,7 +832,7 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
 
               <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
                 <p className="text-sm text-green-400">
-                  Click Apply to import this configuration. You can then proceed to the Select Resources step.
+                  Click Continue to load this configuration. No changes will be made to your destination until you execute the migration after the Select Resources step.
                 </p>
               </div>
             </div>
@@ -859,10 +842,22 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
         {/* Log Panel */}
         {logs.length > 0 && (
           <div className="border-t border-nb-gray-800">
-            <div className="bg-nb-gray-900 px-4 py-2 flex items-center gap-2">
+            <div className="bg-nb-gray-900 px-4 py-2 flex items-center justify-between">
               <h4 className="text-xs font-medium text-nb-gray-300">Import Log</h4>
+              <button
+                onClick={() => {
+                  const logText = logs.map((l) => `${l.type === "error" ? "x" : l.type === "success" ? "+" : l.type === "warning" ? "!" : "-"} ${l.message}`).join("\n");
+                  navigator.clipboard.writeText(logText);
+                }}
+                className="text-xs text-nb-gray-400 hover:text-nb-gray-200 transition-colors"
+                title="Copy log"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
             </div>
-            <div className="max-h-32 overflow-y-auto px-4 py-2 bg-nb-gray-950 space-y-0.5 font-mono text-xs">
+            <div className="max-h-20 overflow-y-auto px-4 py-2 bg-nb-gray-950 space-y-0.5 font-mono text-xs">
               {logs.map((log, i) => (
                 <div
                   key={i}
@@ -936,7 +931,7 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
               onClick={handleApply}
               className="px-4 py-2 bg-netbird-400 text-white text-sm font-medium rounded-md hover:bg-netbird-500 transition-colors"
             >
-              Apply
+              Continue
             </button>
           )}
         </div>

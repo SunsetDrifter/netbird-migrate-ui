@@ -79,7 +79,12 @@ export default function SelectPage() {
       return;
     }
 
-    if (!resources && source && !hasFetched.current) {
+    // Resources already loaded (from import or previous fetch) - skip API call
+    if (resources) {
+      return;
+    }
+
+    if (source && !hasFetched.current) {
       hasFetched.current = true;
       fetchResources();
     }
