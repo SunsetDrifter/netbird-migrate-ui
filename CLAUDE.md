@@ -35,7 +35,7 @@ The migration endpoint (`/api/migrate/route.ts`) streams results back via SSE (S
 ### Key Modules
 
 - **`lib/netbird-client.ts`** — HTTP wrapper for the NetBird API. Handles auth (`Token` header), rate limiting (429 retry), and all CRUD operations for each resource type.
-- **`lib/migration-engine.ts`** — Orchestrates migration in dependency order: groups → posture checks → policies → routes → DNS → DNS zones → networks → account settings. Emits `MigrationEvent` objects for real-time UI updates.
+- **`lib/migration-engine.ts`** — Orchestrates migration in dependency order: groups → posture checks → policies → routes → DNS → DNS zones → networks → setup keys → account settings. Emits `MigrationEvent` objects for real-time UI updates.
 - **`lib/id-mapping.ts`** — Tracks source-to-destination ID mappings so dependent resources (policies referencing groups, routes referencing groups, etc.) can resolve references correctly.
 - **`lib/types.ts`** — All TypeScript interfaces for NetBird resources, migration state, conflicts, and events.
 - **`lib/build-auto-selection.ts`** — Generates default resource selection from fetched source resources.

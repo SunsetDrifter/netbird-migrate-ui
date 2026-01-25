@@ -49,7 +49,8 @@ Resources are migrated in dependency order:
 5. DNS Nameserver Groups
 6. DNS Zones
 7. Networks
-8. Account Settings
+8. Setup Keys (new secrets generated)
+9. Account Settings
 
 ## Limitations
 
