@@ -28,9 +28,6 @@ export function buildAutoSelection(data: SourceResources): ResourceSelection {
       ? ["disabled_management_groups"]
       : [],
     networks: data.networks.map((n) => n.id),
-    setup_keys: data.setup_keys
-      .filter((k) => k.valid && !k.revoked)
-      .map((k) => k.id),
     account_settings: authSettingIds,
   };
 }

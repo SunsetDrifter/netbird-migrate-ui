@@ -129,6 +129,13 @@ export default function ExecutePage() {
     }
   }, [sourceConnected, destConnected, resources, router, conflictsLoaded, detectConflicts]);
 
+  // Scroll to top when page loads with completed migration
+  useEffect(() => {
+    if (result) {
+      window.scrollTo(0, 0);
+    }
+  }, [result]);
+
   const handleResolutionChange = (index: number, resolution: ConflictResolution) => {
     const updated = [...conflicts];
     updated[index] = { ...updated[index], resolution };

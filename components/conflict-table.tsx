@@ -14,7 +14,6 @@ const typeLabels: Record<string, string> = {
   routes: "Route",
   dns: "DNS",
   networks: "Network",
-  setup_keys: "Setup Key",
 };
 
 export function ConflictTable({

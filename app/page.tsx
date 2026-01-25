@@ -61,7 +61,6 @@ export default function ConnectPage() {
       dns_zones: [],
       dns_settings: [],
       networks: [],
-      setup_keys: [],
       account_settings: [],
     });
   };
@@ -168,7 +167,8 @@ export default function ConnectPage() {
           actionButton={
             <button
               onClick={() => setImportModalOpen(true)}
-              className="w-full px-4 py-2 border border-nb-gray-700 text-nb-gray-200 text-sm font-medium rounded-md hover:bg-nb-gray-800"
+              disabled={!destConnected}
+              className="w-full px-4 py-2 border border-nb-gray-700 text-nb-gray-200 text-sm font-medium rounded-md hover:bg-nb-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Import Config
             </button>

@@ -68,7 +68,6 @@ const defaultSelection: ResourceSelection = {
   dns_zones: [],
   dns_settings: [],
   networks: [],
-  setup_keys: [],
   account_settings: [],
 };
 

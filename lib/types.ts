@@ -145,22 +145,6 @@ export interface Network {
   policies: string[];
 }
 
-export interface SetupKey {
-  id: string;
-  key: string;
-  name: string;
-  type: string;
-  valid: boolean;
-  revoked: boolean;
-  used_times: number;
-  last_used: string;
-  expires_in: number;
-  expires: string;
-  auto_groups: string[];
-  ephemeral: boolean;
-  usage_limit: number;
-}
-
 // Account settings types
 
 export interface AccountSettingsExtra {
@@ -195,8 +179,7 @@ export type ResourceType =
   | "routes"
   | "dns"
   | "dns_zones"
-  | "networks"
-  | "setup_keys";
+  | "networks";
 
 export interface SourceResources {
   groups: Group[];
@@ -206,7 +189,6 @@ export interface SourceResources {
   dns: DNSNameserverGroup[];
   dns_zones: DNSZone[];
   networks: Network[];
-  setup_keys: SetupKey[];
   dns_settings?: DNSSettings;
   account_settings?: AccountSettings;
 }
@@ -220,7 +202,6 @@ export interface ResourceSelection {
   dns_zones: string[];
   dns_settings: string[];
   networks: string[];
-  setup_keys: string[];
   account_settings: string[];
 }
 

@@ -247,19 +247,6 @@ export default function SelectPage() {
           onSelectionChange={(ids) => updateSelection("networks", ids)}
         />
 
-        <ResourceList
-          title="Setup Keys"
-          items={resources.setup_keys
-            .filter((k) => k.valid && !k.revoked)
-            .map((k) => ({
-              id: k.id,
-              name: k.name,
-              subtitle: `${k.type} - used ${k.used_times} times`,
-            }))}
-          selectedIds={selection.setup_keys}
-          onSelectionChange={(ids) => updateSelection("setup_keys", ids)}
-        />
-
         {resources.account_settings && (() => {
           const s = resources.account_settings;
           const items: { id: string; name: string; subtitle: string }[] = [];

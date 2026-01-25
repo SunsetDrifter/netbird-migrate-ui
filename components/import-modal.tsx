@@ -42,7 +42,6 @@ const resourceTypeLabels: Record<keyof SourceResources, string> = {
   dns: "DNS Nameservers",
   dns_zones: "DNS Zones",
   networks: "Networks",
-  setup_keys: "Setup Keys",
   dns_settings: "DNS Settings",
   account_settings: "Account Settings",
 };
@@ -122,7 +121,6 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
           if (resources.dns?.length) counts.push(`${resources.dns.length} DNS nameservers`);
           if (resources.dns_zones?.length) counts.push(`${resources.dns_zones.length} DNS zones`);
           if (resources.networks?.length) counts.push(`${resources.networks.length} networks`);
-          if (resources.setup_keys?.length) counts.push(`${resources.setup_keys.length} setup keys`);
           if (resources.dns_settings) counts.push("DNS settings");
           if (resources.account_settings) counts.push("account settings");
 
@@ -552,9 +550,7 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
                 <div className="space-y-1">
                   <h4 className="text-xs font-medium text-nb-gray-200">Resources to Import</h4>
                   <div className="max-h-44 overflow-y-auto space-y-0.5">
-                  {(Object.keys(resourceTypeLabels) as (keyof SourceResources)[])
-                    .filter((key) => key !== "setup_keys")
-                    .map((key) => {
+                  {(Object.keys(resourceTypeLabels) as (keyof SourceResources)[]).map((key) => {
                     const items = config.resources?.[key];
                     if (!items) return null;
                     const isArray = Array.isArray(items);
@@ -642,13 +638,11 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
                 <div className="mt-3 p-2 bg-nb-gray-900/50 rounded-lg border border-amber-500/30">
                   <h4 className="text-xs font-medium text-amber-400 mb-1">Not Migrated</h4>
                   <ul className="text-xs text-nb-gray-300 space-y-0.5">
-                    {config.resources.setup_keys && config.resources.setup_keys.length > 0 && (
-                      <li className="flex items-center gap-1">
-                        <span className="text-amber-500">•</span>
-                        <span className="text-nb-gray-200">Setup Keys</span>
-                        <span className="text-nb-gray-500">— must redistribute ({config.resources.setup_keys.length})</span>
-                      </li>
-                    )}
+                    <li className="flex items-center gap-1">
+                      <span className="text-amber-500">•</span>
+                      <span className="text-nb-gray-200">Setup Keys</span>
+                      <span className="text-nb-gray-500">— must redistribute manually</span>
+                    </li>
                     <li className="flex items-center gap-1">
                       <span className="text-amber-500">•</span>
                       <span className="text-nb-gray-200">Dashboard restrictions</span>

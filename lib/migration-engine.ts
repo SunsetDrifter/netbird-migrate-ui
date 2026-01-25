@@ -8,7 +8,6 @@ import type {
   DNSNameserverGroup,
   DNSZone,
   Network,
-  SetupKey,
   Conflict,
   ResourceSelection,
   SourceResources,
@@ -91,11 +90,6 @@ export class MigrationEngine {
       conflictMap
     );
     await this.migrateNetworks(resources.networks, selection.networks, conflictMap);
-    await this.migrateSetupKeys(
-      resources.setup_keys,
-      selection.setup_keys,
-      conflictMap
-    );
     await this.migrateAuthSettings(resources, selection.account_settings || []);
 
     this.emit({
@@ -822,75 +816,6 @@ export class MigrationEngine {
           resourceName: network.name,
           message: `Failed: ${network.name}: ${errMsg}`,
         });
-      }
-    }
-  }
-
-  private async migrateSetupKeys(
-    keys: SetupKey[],
-    selectedIds: string[],
-    conflictMap: Map<string, Conflict>
-  ) {
-    const selected = keys.filter((k) => selectedIds.includes(k.id));
-
-    for (const key of selected) {
-      const { skip } = this.shouldSkip(
-        "setup_keys",
-        key.id,
-        conflictMap
-      );
-
-      if (skip) {
-        this.result.skipped++;
-        this.emit({
-          type: "progress",
-          resourceType: "setup_keys",
-          resourceName: key.name,
-          message: `Skipped setup key: ${key.name}`,
-        });
-        continue;
-      }
-
-      try {
-        await this.dest.createSetupKey({
-          name: key.name,
-          type: key.type,
-          expires_in: 2592000, // 30 days (fresh expiry)
-          auto_groups: this.idMap.mapGroupIds(key.auto_groups || []),
-          ephemeral: key.ephemeral,
-          usage_limit: key.usage_limit,
-        });
-        this.result.created++;
-        this.emit({
-          type: "success",
-          resourceType: "setup_keys",
-          resourceName: key.name,
-          message: `Created setup key: ${key.name}`,
-        });
-      } catch (err) {
-        if (this.isAlreadyExistsError(err)) {
-          this.result.skipped++;
-          this.emit({
-            type: "progress",
-            resourceType: "setup_keys",
-            resourceName: key.name,
-            message: `Already exists, skipped setup key: ${key.name}`,
-          });
-        } else {
-          this.result.failed++;
-          const errMsg = err instanceof Error ? err.message : String(err);
-          this.result.errors.push({
-            resourceType: "setup_keys",
-            name: key.name,
-            error: errMsg,
-          });
-          this.emit({
-            type: "error",
-            resourceType: "setup_keys",
-            resourceName: key.name,
-            message: `Failed: ${key.name}: ${errMsg}`,
-          });
-        }
       }
     }
   }

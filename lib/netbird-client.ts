@@ -10,7 +10,6 @@ import type {
   Network,
   NetworkResource,
   NetworkRouter,
-  SetupKey,
   Account,
   AccountSettings,
   SourceResources,
@@ -383,22 +382,6 @@ export class NetBirdClient {
     );
   }
 
-  // Setup Keys
-  async getSetupKeys(): Promise<SetupKey[]> {
-    return this.request<SetupKey[]>("GET", "/setup-keys");
-  }
-
-  async createSetupKey(data: {
-    name: string;
-    type: string;
-    expires_in: number;
-    auto_groups: string[];
-    ephemeral: boolean;
-    usage_limit: number;
-  }): Promise<SetupKey> {
-    return this.request<SetupKey>("POST", "/setup-keys", data);
-  }
-
   // Accounts
   async getAccounts(): Promise<Account[]> {
     return this.request<Account[]>("GET", "/accounts");
@@ -410,7 +393,7 @@ export class NetBirdClient {
 
   // Fetch all resources for migration
   async getAllResources(): Promise<SourceResources> {
-    const [groups, posture_checks, policies, routes, dns, dns_zones, networksBasic, setup_keys, dns_settings, accounts] =
+    const [groups, posture_checks, policies, routes, dns, dns_zones, networksBasic, dns_settings, accounts] =
       await Promise.all([
         this.getGroups(),
         this.getPostureChecks().catch(() => [] as PostureCheck[]),
@@ -419,7 +402,6 @@ export class NetBirdClient {
         this.getDNSNameserverGroups(),
         this.getDNSZones().catch(() => [] as DNSZone[]),
         this.getNetworks(),
-        this.getSetupKeys(),
         this.getDNSSettings().catch(() => undefined),
         this.getAccounts().catch(() => undefined),
       ]);
@@ -459,6 +441,6 @@ export class NetBirdClient {
       };
     }
 
-    return { groups, posture_checks, policies, routes, dns, dns_zones, networks, setup_keys, dns_settings, account_settings };
+    return { groups, posture_checks, policies, routes, dns, dns_zones, networks, dns_settings, account_settings };
   }
 }
