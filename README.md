@@ -11,9 +11,24 @@ A web application for migrating configurations between NetBird accounts. Connect
 
 ## Getting Started
 
+### Local Development
+
 ```bash
 npm install
 npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+### Docker
+
+```bash
+# Build and run with docker-compose
+docker compose up -d
+
+# Or build and run manually
+docker build -t netbird-migrate-ui .
+docker run -p 3000:3000 netbird-migrate-ui
 ```
 
 Open [http://localhost:3000](http://localhost:3000).

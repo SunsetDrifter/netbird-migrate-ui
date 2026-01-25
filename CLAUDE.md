@@ -19,6 +19,16 @@ npx tsc --noEmit # Type-check without building
 
 No test framework is configured.
 
+## Docker
+
+The app uses a multi-stage Docker build with `output: 'standalone'` in `next.config.ts` for minimal image size (~100-150MB).
+
+```bash
+docker build -t netbird-migrate-ui .   # Build image
+docker run -p 3000:3000 netbird-migrate-ui  # Run container
+docker compose up -d                   # Or use docker-compose
+```
+
 ## Architecture
 
 ### Data Flow
