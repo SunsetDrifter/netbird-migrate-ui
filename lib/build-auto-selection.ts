@@ -1,6 +1,15 @@
 import type { ResourceSelection, SourceResources } from "@/lib/types";
+import { isCrossPlatformMigration } from "@/lib/platform";
 
-export function buildAutoSelection(data: SourceResources): ResourceSelection {
+export interface AutoSelectionContext {
+  sourceUrl?: string | null;
+  destUrl?: string | null;
+}
+
+export function buildAutoSelection(
+  data: SourceResources,
+  ctx: AutoSelectionContext = {}
+): ResourceSelection {
   const authSettingIds: string[] = [];
   if (data.account_settings) {
     const s = data.account_settings;
@@ -28,6 +37,25 @@ export function buildAutoSelection(data: SourceResources): ResourceSelection {
       ? ["disabled_management_groups"]
       : [],
     networks: data.networks.map((n) => n.id),
+    // Reverse Proxy resources are platform-bound (target_cluster pins them to
+    // a specific cluster, and CE/Cloud use different cluster infrastructure),
+    // so we don't auto-select them when migrating across platforms.
+    // Also drop entries without a real ID — those are platform-provided
+    // (e.g. type: "free") cluster domains, not user config.
+    reverse_proxy_domains: isCrossPlatformMigration(ctx.sourceUrl, ctx.destUrl)
+      ? []
+      : (data.reverse_proxy_domains || [])
+          .filter((d) => d.id && d.id.length > 0)
+          .map((d) => d.id),
+    reverse_proxy_services: isCrossPlatformMigration(
+      ctx.sourceUrl,
+      ctx.destUrl
+    )
+      ? []
+      : (data.reverse_proxy_services || [])
+          .filter((s) => s.source !== "ephemeral")
+          .filter((s) => s.id && s.id.length > 0)
+          .map((s) => s.id),
     account_settings: authSettingIds,
   };
 }
