@@ -370,6 +370,26 @@ export default function SelectPage() {
               subtitle: s.network_range,
             });
           }
+          if (s.network_range_v6) {
+            items.push({
+              id: "network_range_v6",
+              name: "IPv6 Network Range",
+              subtitle: s.network_range_v6,
+            });
+          }
+          if (s.ipv6_enabled_groups && s.ipv6_enabled_groups.length > 0) {
+            const groupsById = new Map(
+              resources.groups.map((g) => [g.id, g.name] as const)
+            );
+            const groupNames = s.ipv6_enabled_groups
+              .map((id) => groupsById.get(id) ?? id)
+              .join(", ");
+            items.push({
+              id: "ipv6_enabled_groups",
+              name: "IPv6 Enabled Groups",
+              subtitle: groupNames,
+            });
+          }
           if (s.routing_peer_dns_resolution_enabled !== undefined) {
             items.push({
               id: "routing_peer_dns_resolution_enabled",

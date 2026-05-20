@@ -37,6 +37,8 @@ function fullSelectionForAll(): ResourceSelection {
       "user_approval",
       "dns_domain",
       "network_range",
+      "network_range_v6",
+      "ipv6_enabled_groups",
       "routing_peer_dns_resolution_enabled",
       "auto_update_version",
       "lazy_connection_enabled",

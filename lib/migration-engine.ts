@@ -1153,6 +1153,19 @@ export class MigrationEngine {
         appliedSettings.push(`network range: ${src.network_range}`);
       }
 
+      if (selectedIds.includes("network_range_v6") && src.network_range_v6) {
+        merged.network_range_v6 = src.network_range_v6;
+        appliedSettings.push(`IPv6 network range: ${src.network_range_v6}`);
+      }
+
+      if (selectedIds.includes("ipv6_enabled_groups") && src.ipv6_enabled_groups) {
+        const mappedGroups = this.idMap.mapGroupIds(src.ipv6_enabled_groups);
+        merged.ipv6_enabled_groups = mappedGroups;
+        appliedSettings.push(
+          `IPv6 enabled groups: ${mappedGroups.length} group${mappedGroups.length !== 1 ? "s" : ""}`
+        );
+      }
+
       if (selectedIds.includes("routing_peer_dns_resolution_enabled") && src.routing_peer_dns_resolution_enabled !== undefined) {
         merged.routing_peer_dns_resolution_enabled = src.routing_peer_dns_resolution_enabled;
         appliedSettings.push(src.routing_peer_dns_resolution_enabled ? "DNS wildcard routing enabled" : "DNS wildcard routing disabled");

@@ -603,7 +603,8 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
                           const s = config.resources.account_settings;
                           const hasSettings = s.peer_login_expiration_enabled || s.peer_inactivity_expiration_enabled ||
                             s.extra?.peer_approval_enabled || s.dns_domain || s.routing_peer_dns_resolution_enabled ||
-                            s.lazy_connection_enabled;
+                            s.lazy_connection_enabled || s.network_range_v6 ||
+                            (s.ipv6_enabled_groups && s.ipv6_enabled_groups.length > 0);
                           return (
                             <div className="px-4 py-2 bg-nb-gray-950 space-y-1">
                               {hasSettings ? (
@@ -617,6 +618,10 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
                                   {s.extra?.peer_approval_enabled && <li>• Peer approval enabled</li>}
                                   {s.dns_domain && <li>• DNS domain: {s.dns_domain}</li>}
                                   {s.routing_peer_dns_resolution_enabled && <li>• Routing peer DNS resolution enabled</li>}
+                                  {s.network_range_v6 && <li>• IPv6 network range: {s.network_range_v6}</li>}
+                                  {s.ipv6_enabled_groups && s.ipv6_enabled_groups.length > 0 && (
+                                    <li>• IPv6 enabled for {s.ipv6_enabled_groups.length} group{s.ipv6_enabled_groups.length !== 1 ? "s" : ""}</li>
+                                  )}
                                   {s.lazy_connection_enabled && <li>• Lazy connection enabled</li>}
                                 </ul>
                               ) : (

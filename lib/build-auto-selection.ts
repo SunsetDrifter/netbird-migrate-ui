@@ -19,6 +19,8 @@ export function buildAutoSelection(
     if (s.extra?.user_approval_required !== undefined) authSettingIds.push("user_approval");
     if (s.dns_domain) authSettingIds.push("dns_domain");
     if (s.network_range) authSettingIds.push("network_range");
+    if (s.network_range_v6) authSettingIds.push("network_range_v6");
+    if (s.ipv6_enabled_groups && s.ipv6_enabled_groups.length > 0) authSettingIds.push("ipv6_enabled_groups");
     if (s.routing_peer_dns_resolution_enabled !== undefined) authSettingIds.push("routing_peer_dns_resolution_enabled");
     if (s.auto_update_version !== undefined) authSettingIds.push("auto_update_version");
     if (s.lazy_connection_enabled !== undefined) authSettingIds.push("lazy_connection_enabled");

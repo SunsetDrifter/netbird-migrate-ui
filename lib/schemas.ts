@@ -221,6 +221,8 @@ const AccountSettingsSchema = z.object({
     .optional(),
   dns_domain: z.string().optional(),
   network_range: z.string().optional(),
+  network_range_v6: z.string().optional(),
+  ipv6_enabled_groups: z.array(z.string()).optional(),
   routing_peer_dns_resolution_enabled: z.boolean().optional(),
   auto_update_version: z.string().optional(),
   lazy_connection_enabled: z.boolean().optional(),

@@ -229,6 +229,8 @@ export interface AccountSettings {
   extra?: AccountSettingsExtra;
   dns_domain?: string;
   network_range?: string;
+  network_range_v6?: string;
+  ipv6_enabled_groups?: string[];
   routing_peer_dns_resolution_enabled?: boolean;
   auto_update_version?: string;
   lazy_connection_enabled?: boolean;

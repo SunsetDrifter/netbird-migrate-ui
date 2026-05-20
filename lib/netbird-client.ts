@@ -521,6 +521,8 @@ export class NetBirdClient {
         extra: s.extra as AccountSettings["extra"],
         dns_domain: s.dns_domain as string | undefined,
         network_range: s.network_range as string | undefined,
+        network_range_v6: s.network_range_v6 as string | undefined,
+        ipv6_enabled_groups: s.ipv6_enabled_groups as string[] | undefined,
         routing_peer_dns_resolution_enabled: s.routing_peer_dns_resolution_enabled as boolean | undefined,
         auto_update_version: s.auto_update_version as string | undefined,
         lazy_connection_enabled: s.lazy_connection_enabled as boolean | undefined,

@@ -48,6 +48,8 @@ function fullSelection(resources: SourceResources): ResourceSelection {
       "user_approval",
       "dns_domain",
       "network_range",
+      "network_range_v6",
+      "ipv6_enabled_groups",
       "routing_peer_dns_resolution_enabled",
       "auto_update_version",
       "lazy_connection_enabled",
@@ -837,5 +839,53 @@ describe("MigrationEngine — account settings", () => {
     expect(merged.dns_domain).toBe("new.netbird.cloud");
     // Unmanaged destination fields are preserved.
     expect(merged.mystery_field).toBe("should-survive");
+  });
+
+  it("translates ipv6_enabled_groups source IDs into destination group IDs", async () => {
+    const resources = makeFullSourceResources({
+      groups: [
+        makeGroup({ id: "src-g1", name: "Developers" }),
+        makeGroup({ id: "src-g2", name: "Servers" }),
+      ],
+      posture_checks: [],
+      policies: [],
+      routes: [],
+      dns: [],
+      dns_zones: [],
+      networks: [],
+      reverse_proxy_domains: [],
+      reverse_proxy_services: [],
+      dns_settings: { disabled_management_groups: [] },
+      account_settings: makeAccountSettings({
+        network_range_v6: "fd00::/8",
+        ipv6_enabled_groups: ["src-g1", "src-g2"],
+      }),
+    });
+
+    const dest = new RecordingMockClient({
+      destAccounts: [makeAccount()],
+    });
+
+    const { engine } = makeEngine({ dest });
+    await engine.execute(
+      resources,
+      {
+        ...fullSelection(resources),
+        groups: ["src-g1", "src-g2"],
+        account_settings: ["network_range_v6", "ipv6_enabled_groups"],
+      },
+      []
+    );
+
+    const call = dest.callsOf("updateAccount")[0];
+    const merged = call.args[1] as Record<string, unknown>;
+    expect(merged.network_range_v6).toBe("fd00::/8");
+    const mappedGroups = merged.ipv6_enabled_groups as string[];
+    // Mock assigns dest-grp-N sequentially as createGroup is called.
+    expect(mappedGroups).toEqual(["dest-grp-1", "dest-grp-2"]);
+    // No source IDs leaked through.
+    for (const id of mappedGroups) {
+      expect(id.startsWith("src-")).toBe(false);
+    }
   });
 });

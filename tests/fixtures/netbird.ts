@@ -174,6 +174,8 @@ export const makeAccountSettings = (
   peer_inactivity_expiration: 600,
   dns_domain: "netbird.cloud",
   network_range: "100.64.0.0/10",
+  network_range_v6: "fd00::/8",
+  ipv6_enabled_groups: ["src-grp-1"],
   routing_peer_dns_resolution_enabled: true,
   auto_update_version: "latest",
   lazy_connection_enabled: false,
