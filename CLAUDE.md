@@ -83,6 +83,20 @@ The migration endpoint (`/api/migrate/route.ts`) streams results back via SSE (S
 9. Add `resourceTypeLabels` entry in `components/import-modal.tsx`
 10. If the resource references groups, use `this.idMap.mapGroupIds()` for ID translation
 
+### Adding an Account Settings Sub-Field
+
+Account settings aren't a separate resource type — they're a single PUT to `/accounts/{id}` at the end of the migration. Each migrate-able sub-field gets its own entry in `selection.account_settings` (using a stable string id like `"jwt_allow_groups"`). Steps to add one:
+
+1. Add the field to `AccountSettings` (or nested `AccountSettingsExtra`) in `lib/types.ts`
+2. Extend `AccountSettingsSchema` in `lib/schemas.ts`
+3. In `lib/netbird-client.ts` `getAllResources()`, copy the field out of `accounts[0].settings`
+4. In `lib/migration-engine.ts` `migrateAuthSettings()`, add an `if (selectedIds.includes("<id>"))` branch that writes the field onto the merged settings object. Sub-fields under `extra` go inside the `extraSelections` branch
+5. In `lib/build-auto-selection.ts`, push the id onto `authSettingIds` when the source has the field populated
+6. Render the field in an appropriate `ResourceList` card on `app/migrate/page.tsx` and in the `import-modal.tsx` preview
+7. If the field references group IDs, route the values through `this.idMap.mapGroupIds()` — this works because `migrateAuthSettings` is the last step in the pipeline, so the group id map is fully populated. For `Record<string, string[]>` shapes (like `authorized_groups`), translate the *keys* and pass through the values
+
+Look at how IPv6 (`network_range_v6`, `ipv6_enabled_groups`) and JWT (`jwt_allow_groups`) are wired for a complete worked example.
+
 ### Conflict Resolution
 
 Resources are matched by name (case-insensitive). When a source resource name exists in the destination, users choose per-conflict: **skip** (leave destination as-is) or **overwrite** (update destination with source data).
