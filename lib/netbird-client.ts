@@ -525,7 +525,16 @@ export class NetBirdClient {
         ipv6_enabled_groups: s.ipv6_enabled_groups as string[] | undefined,
         routing_peer_dns_resolution_enabled: s.routing_peer_dns_resolution_enabled as boolean | undefined,
         auto_update_version: s.auto_update_version as string | undefined,
+        auto_update_always: s.auto_update_always as boolean | undefined,
         lazy_connection_enabled: s.lazy_connection_enabled as boolean | undefined,
+        groups_propagation_enabled: s.groups_propagation_enabled as boolean | undefined,
+        jwt_groups_enabled: s.jwt_groups_enabled as boolean | undefined,
+        jwt_groups_claim_name: s.jwt_groups_claim_name as string | undefined,
+        jwt_allow_groups: s.jwt_allow_groups as string[] | undefined,
+        peer_expose_enabled: s.peer_expose_enabled as boolean | undefined,
+        peer_expose_groups: s.peer_expose_groups as string[] | undefined,
+        regular_users_view_blocked: s.regular_users_view_blocked as boolean | undefined,
+        local_mfa_enabled: s.local_mfa_enabled as boolean | undefined,
       };
     }
 

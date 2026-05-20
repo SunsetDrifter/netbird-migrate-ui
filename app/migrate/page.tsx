@@ -420,6 +420,13 @@ export default function SelectPage() {
               subtitle: display,
             });
           }
+          if (s.auto_update_always !== undefined) {
+            items.push({
+              id: "auto_update_always",
+              name: "Background Auto-Update",
+              subtitle: s.auto_update_always ? "Enabled" : "Disabled",
+            });
+          }
           if (s.lazy_connection_enabled !== undefined) {
             items.push({
               id: "lazy_connection_enabled",
@@ -431,6 +438,138 @@ export default function SelectPage() {
           return (
             <ResourceList
               title="Client Settings"
+              items={items}
+              selectedIds={selection.account_settings}
+              onSelectionChange={(ids) => updateSelection("account_settings", ids)}
+            />
+          );
+        })()}
+
+        {resources.account_settings && (() => {
+          const s = resources.account_settings;
+          const groupsById = new Map(
+            resources.groups.map((g) => [g.id, g.name] as const)
+          );
+          const items: { id: string; name: string; subtitle: string }[] = [];
+          if (s.groups_propagation_enabled !== undefined) {
+            items.push({
+              id: "groups_propagation_enabled",
+              name: "User Group Propagation",
+              subtitle: s.groups_propagation_enabled ? "Enabled" : "Disabled",
+            });
+          }
+          if (s.jwt_groups_enabled !== undefined) {
+            items.push({
+              id: "jwt_groups_enabled",
+              name: "JWT Group Sync",
+              subtitle: s.jwt_groups_enabled ? "Enabled" : "Disabled",
+            });
+          }
+          if (s.jwt_groups_claim_name) {
+            items.push({
+              id: "jwt_groups_claim_name",
+              name: "JWT Groups Claim Name",
+              subtitle: s.jwt_groups_claim_name,
+            });
+          }
+          if (s.jwt_allow_groups && s.jwt_allow_groups.length > 0) {
+            const names = s.jwt_allow_groups.map((id) => groupsById.get(id) ?? id).join(", ");
+            items.push({
+              id: "jwt_allow_groups",
+              name: "JWT Allow Groups",
+              subtitle: names,
+            });
+          }
+          if (s.regular_users_view_blocked !== undefined) {
+            items.push({
+              id: "regular_users_view_blocked",
+              name: "Regular User View Blocked",
+              subtitle: s.regular_users_view_blocked ? "Blocked" : "Allowed",
+            });
+          }
+          if (s.local_mfa_enabled !== undefined) {
+            items.push({
+              id: "local_mfa_enabled",
+              name: "Local MFA (TOTP)",
+              subtitle: s.local_mfa_enabled ? "Enabled" : "Disabled",
+            });
+          }
+          if (items.length === 0) return null;
+          return (
+            <ResourceList
+              title="User Management"
+              items={items}
+              selectedIds={selection.account_settings}
+              onSelectionChange={(ids) => updateSelection("account_settings", ids)}
+            />
+          );
+        })()}
+
+        {resources.account_settings && (() => {
+          const s = resources.account_settings;
+          const groupsById = new Map(
+            resources.groups.map((g) => [g.id, g.name] as const)
+          );
+          const items: { id: string; name: string; subtitle: string }[] = [];
+          if (s.peer_expose_enabled !== undefined) {
+            items.push({
+              id: "peer_expose_enabled",
+              name: "Peer Service Exposure",
+              subtitle: s.peer_expose_enabled ? "Enabled" : "Disabled",
+            });
+          }
+          if (s.peer_expose_groups && s.peer_expose_groups.length > 0) {
+            const names = s.peer_expose_groups.map((id) => groupsById.get(id) ?? id).join(", ");
+            items.push({
+              id: "peer_expose_groups",
+              name: "Peer Expose Groups",
+              subtitle: names,
+            });
+          }
+          if (items.length === 0) return null;
+          return (
+            <ResourceList
+              title="Peer Expose"
+              items={items}
+              selectedIds={selection.account_settings}
+              onSelectionChange={(ids) => updateSelection("account_settings", ids)}
+            />
+          );
+        })()}
+
+        {resources.account_settings && (() => {
+          const s = resources.account_settings;
+          const groupsById = new Map(
+            resources.groups.map((g) => [g.id, g.name] as const)
+          );
+          const items: { id: string; name: string; subtitle: string }[] = [];
+          const hasLogs =
+            s.extra?.network_traffic_logs_enabled !== undefined ||
+            (s.extra?.network_traffic_logs_groups && s.extra.network_traffic_logs_groups.length > 0);
+          if (hasLogs) {
+            const groupCount = s.extra?.network_traffic_logs_groups?.length ?? 0;
+            const enabledLabel = s.extra?.network_traffic_logs_enabled ? "Enabled" : "Disabled";
+            const groupNames = (s.extra?.network_traffic_logs_groups ?? [])
+              .map((id) => groupsById.get(id) ?? id)
+              .join(", ");
+            const subtitle = groupCount > 0 ? `${enabledLabel} — ${groupNames}` : enabledLabel;
+            items.push({
+              id: "network_traffic_logs",
+              name: "Network Traffic Logs",
+              subtitle,
+            });
+          }
+          if (s.extra?.network_traffic_packet_counter_enabled !== undefined) {
+            items.push({
+              id: "network_traffic_packet_counter",
+              name: "Packet Counter",
+              subtitle: s.extra.network_traffic_packet_counter_enabled ? "Enabled" : "Disabled",
+            });
+          }
+          if (items.length === 0) return null;
+          return (
+            <ResourceList
+              title="Activity Logs"
               items={items}
               selectedIds={selection.account_settings}
               onSelectionChange={(ids) => updateSelection("account_settings", ids)}

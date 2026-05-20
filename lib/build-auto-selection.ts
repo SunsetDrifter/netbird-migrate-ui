@@ -23,7 +23,20 @@ export function buildAutoSelection(
     if (s.ipv6_enabled_groups && s.ipv6_enabled_groups.length > 0) authSettingIds.push("ipv6_enabled_groups");
     if (s.routing_peer_dns_resolution_enabled !== undefined) authSettingIds.push("routing_peer_dns_resolution_enabled");
     if (s.auto_update_version !== undefined) authSettingIds.push("auto_update_version");
+    if (s.auto_update_always !== undefined) authSettingIds.push("auto_update_always");
     if (s.lazy_connection_enabled !== undefined) authSettingIds.push("lazy_connection_enabled");
+    if (s.groups_propagation_enabled !== undefined) authSettingIds.push("groups_propagation_enabled");
+    if (s.jwt_groups_enabled !== undefined) authSettingIds.push("jwt_groups_enabled");
+    if (s.jwt_groups_claim_name) authSettingIds.push("jwt_groups_claim_name");
+    if (s.jwt_allow_groups && s.jwt_allow_groups.length > 0) authSettingIds.push("jwt_allow_groups");
+    if (s.peer_expose_enabled !== undefined) authSettingIds.push("peer_expose_enabled");
+    if (s.peer_expose_groups && s.peer_expose_groups.length > 0) authSettingIds.push("peer_expose_groups");
+    if (s.regular_users_view_blocked !== undefined) authSettingIds.push("regular_users_view_blocked");
+    if (s.local_mfa_enabled !== undefined) authSettingIds.push("local_mfa_enabled");
+    if (s.extra?.network_traffic_logs_enabled !== undefined || (s.extra?.network_traffic_logs_groups && s.extra.network_traffic_logs_groups.length > 0)) {
+      authSettingIds.push("network_traffic_logs");
+    }
+    if (s.extra?.network_traffic_packet_counter_enabled !== undefined) authSettingIds.push("network_traffic_packet_counter");
   }
 
   return {

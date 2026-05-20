@@ -604,7 +604,14 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
                           const hasSettings = s.peer_login_expiration_enabled || s.peer_inactivity_expiration_enabled ||
                             s.extra?.peer_approval_enabled || s.dns_domain || s.routing_peer_dns_resolution_enabled ||
                             s.lazy_connection_enabled || s.network_range_v6 ||
-                            (s.ipv6_enabled_groups && s.ipv6_enabled_groups.length > 0);
+                            (s.ipv6_enabled_groups && s.ipv6_enabled_groups.length > 0) ||
+                            s.groups_propagation_enabled || s.jwt_groups_enabled || s.jwt_groups_claim_name ||
+                            (s.jwt_allow_groups && s.jwt_allow_groups.length > 0) ||
+                            s.peer_expose_enabled || (s.peer_expose_groups && s.peer_expose_groups.length > 0) ||
+                            s.regular_users_view_blocked || s.local_mfa_enabled || s.auto_update_always ||
+                            s.extra?.network_traffic_logs_enabled ||
+                            (s.extra?.network_traffic_logs_groups && s.extra.network_traffic_logs_groups.length > 0) ||
+                            s.extra?.network_traffic_packet_counter_enabled;
                           return (
                             <div className="px-4 py-2 bg-nb-gray-950 space-y-1">
                               {hasSettings ? (
@@ -623,13 +630,32 @@ export function ImportModal({ open, onClose, onImport, destination, destConnecte
                                     <li>• IPv6 enabled for {s.ipv6_enabled_groups.length} group{s.ipv6_enabled_groups.length !== 1 ? "s" : ""}</li>
                                   )}
                                   {s.lazy_connection_enabled && <li>• Lazy connection enabled</li>}
+                                  {s.auto_update_always && <li>• Background auto-update enabled</li>}
+                                  {s.groups_propagation_enabled && <li>• User group propagation enabled</li>}
+                                  {s.jwt_groups_enabled && (
+                                    <li>• JWT group sync enabled{s.jwt_groups_claim_name ? ` (claim: ${s.jwt_groups_claim_name})` : ""}</li>
+                                  )}
+                                  {s.jwt_allow_groups && s.jwt_allow_groups.length > 0 && (
+                                    <li>• JWT allow groups: {s.jwt_allow_groups.length}</li>
+                                  )}
+                                  {s.peer_expose_enabled && <li>• Peer service exposure enabled</li>}
+                                  {s.peer_expose_groups && s.peer_expose_groups.length > 0 && (
+                                    <li>• Peer expose groups: {s.peer_expose_groups.length}</li>
+                                  )}
+                                  {s.regular_users_view_blocked && <li>• Regular user view blocked</li>}
+                                  {s.local_mfa_enabled && <li>• Local MFA (TOTP) enabled</li>}
+                                  {s.extra?.network_traffic_logs_enabled && (
+                                    <li>• Network traffic logs enabled
+                                      {s.extra.network_traffic_logs_groups && s.extra.network_traffic_logs_groups.length > 0
+                                        ? ` (${s.extra.network_traffic_logs_groups.length} group${s.extra.network_traffic_logs_groups.length !== 1 ? "s" : ""})`
+                                        : ""}
+                                    </li>
+                                  )}
+                                  {s.extra?.network_traffic_packet_counter_enabled && <li>• Network traffic packet counter enabled</li>}
                                 </ul>
                               ) : (
                                 <p className="text-sm text-nb-gray-300">Account settings included</p>
                               )}
-                              <p className="text-xs text-amber-400 mt-2">
-                                Not migrated: Dashboard restrictions, User group propagation
-                              </p>
                             </div>
                           );
                         })()}

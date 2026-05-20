@@ -1171,7 +1171,13 @@ export class MigrationEngine {
         appliedSettings.push(src.routing_peer_dns_resolution_enabled ? "DNS wildcard routing enabled" : "DNS wildcard routing disabled");
       }
 
-      if (selectedIds.includes("peer_approval") || selectedIds.includes("user_approval")) {
+      const extraSelections = [
+        "peer_approval",
+        "user_approval",
+        "network_traffic_logs",
+        "network_traffic_packet_counter",
+      ];
+      if (extraSelections.some((id) => selectedIds.includes(id))) {
         const extraMerged: Record<string, unknown> = {
           ...(destSettings.extra as Record<string, unknown> || {}),
         };
@@ -1183,6 +1189,35 @@ export class MigrationEngine {
           extraMerged.user_approval_required = src.extra.user_approval_required;
           appliedSettings.push(src.extra.user_approval_required ? "user approval required" : "user approval not required");
         }
+        if (selectedIds.includes("network_traffic_logs")) {
+          if (src.extra?.network_traffic_logs_enabled !== undefined) {
+            extraMerged.network_traffic_logs_enabled = src.extra.network_traffic_logs_enabled;
+            appliedSettings.push(
+              src.extra.network_traffic_logs_enabled
+                ? "network traffic logs enabled"
+                : "network traffic logs disabled"
+            );
+          }
+          if (src.extra?.network_traffic_logs_groups) {
+            const mapped = this.idMap.mapGroupIds(src.extra.network_traffic_logs_groups);
+            extraMerged.network_traffic_logs_groups = mapped;
+            appliedSettings.push(
+              `traffic-log groups: ${mapped.length} group${mapped.length !== 1 ? "s" : ""}`
+            );
+          }
+        }
+        if (
+          selectedIds.includes("network_traffic_packet_counter") &&
+          src.extra?.network_traffic_packet_counter_enabled !== undefined
+        ) {
+          extraMerged.network_traffic_packet_counter_enabled =
+            src.extra.network_traffic_packet_counter_enabled;
+          appliedSettings.push(
+            src.extra.network_traffic_packet_counter_enabled
+              ? "packet counter enabled"
+              : "packet counter disabled"
+          );
+        }
         merged.extra = extraMerged;
       }
 
@@ -1191,9 +1226,60 @@ export class MigrationEngine {
         appliedSettings.push(`automatic updates: ${src.auto_update_version}`);
       }
 
+      if (selectedIds.includes("auto_update_always") && src.auto_update_always !== undefined) {
+        merged.auto_update_always = src.auto_update_always;
+        appliedSettings.push(src.auto_update_always ? "background auto-update enabled" : "background auto-update disabled");
+      }
+
       if (selectedIds.includes("lazy_connection_enabled") && src.lazy_connection_enabled !== undefined) {
         merged.lazy_connection_enabled = src.lazy_connection_enabled;
         appliedSettings.push(src.lazy_connection_enabled ? "lazy connections enabled" : "lazy connections disabled");
+      }
+
+      if (selectedIds.includes("groups_propagation_enabled") && src.groups_propagation_enabled !== undefined) {
+        merged.groups_propagation_enabled = src.groups_propagation_enabled;
+        appliedSettings.push(src.groups_propagation_enabled ? "user group propagation enabled" : "user group propagation disabled");
+      }
+
+      if (selectedIds.includes("jwt_groups_enabled") && src.jwt_groups_enabled !== undefined) {
+        merged.jwt_groups_enabled = src.jwt_groups_enabled;
+        appliedSettings.push(src.jwt_groups_enabled ? "JWT group sync enabled" : "JWT group sync disabled");
+      }
+
+      if (selectedIds.includes("jwt_groups_claim_name") && src.jwt_groups_claim_name !== undefined) {
+        merged.jwt_groups_claim_name = src.jwt_groups_claim_name;
+        appliedSettings.push(`JWT groups claim: ${src.jwt_groups_claim_name}`);
+      }
+
+      if (selectedIds.includes("jwt_allow_groups") && src.jwt_allow_groups) {
+        const mapped = this.idMap.mapGroupIds(src.jwt_allow_groups);
+        merged.jwt_allow_groups = mapped;
+        appliedSettings.push(
+          `JWT allow groups: ${mapped.length} group${mapped.length !== 1 ? "s" : ""}`
+        );
+      }
+
+      if (selectedIds.includes("peer_expose_enabled") && src.peer_expose_enabled !== undefined) {
+        merged.peer_expose_enabled = src.peer_expose_enabled;
+        appliedSettings.push(src.peer_expose_enabled ? "peer expose enabled" : "peer expose disabled");
+      }
+
+      if (selectedIds.includes("peer_expose_groups") && src.peer_expose_groups) {
+        const mapped = this.idMap.mapGroupIds(src.peer_expose_groups);
+        merged.peer_expose_groups = mapped;
+        appliedSettings.push(
+          `peer expose groups: ${mapped.length} group${mapped.length !== 1 ? "s" : ""}`
+        );
+      }
+
+      if (selectedIds.includes("regular_users_view_blocked") && src.regular_users_view_blocked !== undefined) {
+        merged.regular_users_view_blocked = src.regular_users_view_blocked;
+        appliedSettings.push(src.regular_users_view_blocked ? "regular users view blocked" : "regular users view allowed");
+      }
+
+      if (selectedIds.includes("local_mfa_enabled") && src.local_mfa_enabled !== undefined) {
+        merged.local_mfa_enabled = src.local_mfa_enabled;
+        appliedSettings.push(src.local_mfa_enabled ? "local MFA enabled" : "local MFA disabled");
       }
 
       await this.dest.updateAccount(destAccount.id, merged);

@@ -52,7 +52,18 @@ function fullSelection(resources: SourceResources): ResourceSelection {
       "ipv6_enabled_groups",
       "routing_peer_dns_resolution_enabled",
       "auto_update_version",
+      "auto_update_always",
       "lazy_connection_enabled",
+      "groups_propagation_enabled",
+      "jwt_groups_enabled",
+      "jwt_groups_claim_name",
+      "jwt_allow_groups",
+      "peer_expose_enabled",
+      "peer_expose_groups",
+      "regular_users_view_blocked",
+      "local_mfa_enabled",
+      "network_traffic_logs",
+      "network_traffic_packet_counter",
     ],
   };
 }
@@ -839,6 +850,74 @@ describe("MigrationEngine — account settings", () => {
     expect(merged.dns_domain).toBe("new.netbird.cloud");
     // Unmanaged destination fields are preserved.
     expect(merged.mystery_field).toBe("should-survive");
+  });
+
+  it("translates all group-referencing account settings into destination group IDs", async () => {
+    const resources = makeFullSourceResources({
+      groups: [
+        makeGroup({ id: "src-g1", name: "Developers" }),
+        makeGroup({ id: "src-g2", name: "Servers" }),
+      ],
+      posture_checks: [],
+      policies: [],
+      routes: [],
+      dns: [],
+      dns_zones: [],
+      networks: [],
+      reverse_proxy_domains: [],
+      reverse_proxy_services: [],
+      dns_settings: { disabled_management_groups: [] },
+      account_settings: makeAccountSettings({
+        jwt_allow_groups: ["src-g1", "src-g2"],
+        peer_expose_groups: ["src-g1"],
+        extra: {
+          peer_approval_enabled: false,
+          user_approval_required: false,
+          network_traffic_logs_enabled: true,
+          network_traffic_logs_groups: ["src-g2"],
+          network_traffic_packet_counter_enabled: false,
+        },
+      }),
+    });
+
+    const dest = new RecordingMockClient({
+      destAccounts: [makeAccount()],
+    });
+
+    const { engine } = makeEngine({ dest });
+    await engine.execute(
+      resources,
+      {
+        ...fullSelection(resources),
+        groups: ["src-g1", "src-g2"],
+        account_settings: ["jwt_allow_groups", "peer_expose_groups", "network_traffic_logs"],
+      },
+      []
+    );
+
+    const call = dest.callsOf("updateAccount")[0];
+    const merged = call.args[1] as Record<string, unknown>;
+    const extra = merged.extra as Record<string, unknown>;
+    const expectAllDestIds = (label: string, ids: string[]) => {
+      for (const id of ids) {
+        expect(
+          id.startsWith("dest-grp-"),
+          `${label} leaked source id ${id}`
+        ).toBe(true);
+      }
+    };
+    const jwt = merged.jwt_allow_groups as string[];
+    expect(jwt).toEqual(["dest-grp-1", "dest-grp-2"]);
+    expectAllDestIds("jwt_allow_groups", jwt);
+
+    const expose = merged.peer_expose_groups as string[];
+    expect(expose).toEqual(["dest-grp-1"]);
+    expectAllDestIds("peer_expose_groups", expose);
+
+    const traffic = extra.network_traffic_logs_groups as string[];
+    expect(traffic).toEqual(["dest-grp-2"]);
+    expectAllDestIds("network_traffic_logs_groups", traffic);
+    expect(extra.network_traffic_logs_enabled).toBe(true);
   });
 
   it("translates ipv6_enabled_groups source IDs into destination group IDs", async () => {

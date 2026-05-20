@@ -108,7 +108,18 @@ describe("buildAutoSelection", () => {
         "ipv6_enabled_groups",
         "routing_peer_dns_resolution_enabled",
         "auto_update_version",
+        "auto_update_always",
         "lazy_connection_enabled",
+        "groups_propagation_enabled",
+        "jwt_groups_enabled",
+        "jwt_groups_claim_name",
+        "jwt_allow_groups",
+        "peer_expose_enabled",
+        "peer_expose_groups",
+        "regular_users_view_blocked",
+        "local_mfa_enabled",
+        "network_traffic_logs",
+        "network_traffic_packet_counter",
       ])
     );
   });

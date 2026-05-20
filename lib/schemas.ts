@@ -217,6 +217,9 @@ const AccountSettingsSchema = z.object({
     .object({
       peer_approval_enabled: z.boolean().optional(),
       user_approval_required: z.boolean().optional(),
+      network_traffic_logs_enabled: z.boolean().optional(),
+      network_traffic_logs_groups: z.array(z.string()).optional(),
+      network_traffic_packet_counter_enabled: z.boolean().optional(),
     })
     .optional(),
   dns_domain: z.string().optional(),
@@ -225,7 +228,16 @@ const AccountSettingsSchema = z.object({
   ipv6_enabled_groups: z.array(z.string()).optional(),
   routing_peer_dns_resolution_enabled: z.boolean().optional(),
   auto_update_version: z.string().optional(),
+  auto_update_always: z.boolean().optional(),
   lazy_connection_enabled: z.boolean().optional(),
+  groups_propagation_enabled: z.boolean().optional(),
+  jwt_groups_enabled: z.boolean().optional(),
+  jwt_groups_claim_name: z.string().optional(),
+  jwt_allow_groups: z.array(z.string()).optional(),
+  peer_expose_enabled: z.boolean().optional(),
+  peer_expose_groups: z.array(z.string()).optional(),
+  regular_users_view_blocked: z.boolean().optional(),
+  local_mfa_enabled: z.boolean().optional(),
 });
 
 export const SourceResourcesSchema = z.object({

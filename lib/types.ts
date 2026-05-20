@@ -219,6 +219,9 @@ export interface ReverseProxyService {
 export interface AccountSettingsExtra {
   peer_approval_enabled?: boolean;
   user_approval_required?: boolean;
+  network_traffic_logs_enabled?: boolean;
+  network_traffic_logs_groups?: string[];
+  network_traffic_packet_counter_enabled?: boolean;
 }
 
 export interface AccountSettings {
@@ -233,7 +236,16 @@ export interface AccountSettings {
   ipv6_enabled_groups?: string[];
   routing_peer_dns_resolution_enabled?: boolean;
   auto_update_version?: string;
+  auto_update_always?: boolean;
   lazy_connection_enabled?: boolean;
+  groups_propagation_enabled?: boolean;
+  jwt_groups_enabled?: boolean;
+  jwt_groups_claim_name?: string;
+  jwt_allow_groups?: string[];
+  peer_expose_enabled?: boolean;
+  peer_expose_groups?: string[];
+  regular_users_view_blocked?: boolean;
+  local_mfa_enabled?: boolean;
 }
 
 export interface Account {
