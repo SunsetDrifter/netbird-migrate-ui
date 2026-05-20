@@ -8,8 +8,7 @@ interface ConnectionFormProps {
   connected: boolean;
   onConnect: (token: string, url: string) => Promise<void>;
   onDisconnect?: () => void;
-  actionButton?: React.ReactNode;
-  actionError?: string;
+  testId?: string;
 }
 
 export function ConnectionForm({
@@ -18,8 +17,7 @@ export function ConnectionForm({
   connected,
   onConnect,
   onDisconnect,
-  actionButton,
-  actionError,
+  testId,
 }: ConnectionFormProps) {
   const [token, setToken] = useState("");
   const [url, setUrl] = useState(defaultUrl);
@@ -40,7 +38,10 @@ export function ConnectionForm({
   };
 
   return (
-    <div className="border border-nb-gray-800 rounded-lg p-6 bg-nb-gray-920">
+    <div
+      data-testid={testId}
+      className="border border-nb-gray-800 rounded-lg p-6 bg-nb-gray-920"
+    >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-medium text-nb-gray-100">{label}</h3>
         {connected && (
@@ -114,14 +115,6 @@ export function ConnectionForm({
         )}
       </form>
 
-      {actionButton && (
-        <div className="mt-4 pt-4 border-t border-nb-gray-800">
-          {actionButton}
-          {actionError && (
-            <p className="mt-2 text-sm text-red-400">{actionError}</p>
-          )}
-        </div>
-      )}
     </div>
   );
 }
