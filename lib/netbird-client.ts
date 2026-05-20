@@ -12,6 +12,12 @@ import type {
   NetworkRouter,
   Account,
   AccountSettings,
+  ReverseProxyDomain,
+  ReverseProxyService,
+  ReverseProxyTarget,
+  ReverseProxyAuthentication,
+  ReverseProxyAccessControl,
+  ReverseProxyAdvancedSettings,
   SourceResources,
 } from "./types";
 
@@ -382,6 +388,69 @@ export class NetBirdClient {
     );
   }
 
+  // Reverse Proxy — Domains
+  async getReverseProxyDomains(): Promise<ReverseProxyDomain[]> {
+    return this.request<ReverseProxyDomain[]>(
+      "GET",
+      "/reverse-proxies/domains"
+    );
+  }
+
+  async createReverseProxyDomain(data: {
+    domain: string;
+  }): Promise<ReverseProxyDomain> {
+    return this.request<ReverseProxyDomain>(
+      "POST",
+      "/reverse-proxies/domains",
+      data
+    );
+  }
+
+  // Reverse Proxy — Services
+  async getReverseProxyServices(): Promise<ReverseProxyService[]> {
+    return this.request<ReverseProxyService[]>(
+      "GET",
+      "/reverse-proxies/services"
+    );
+  }
+
+  async createReverseProxyService(data: {
+    name: string;
+    description?: string;
+    domain: string;
+    protocol: string;
+    targets: ReverseProxyTarget[];
+    authentication?: ReverseProxyAuthentication;
+    accessControl?: ReverseProxyAccessControl;
+    advancedSettings?: ReverseProxyAdvancedSettings;
+  }): Promise<ReverseProxyService> {
+    return this.request<ReverseProxyService>(
+      "POST",
+      "/reverse-proxies/services",
+      data
+    );
+  }
+
+  async updateReverseProxyService(
+    serviceId: string,
+    data: {
+      name: string;
+      description?: string;
+      domain: string;
+      protocol: string;
+      targets: ReverseProxyTarget[];
+      authentication?: ReverseProxyAuthentication;
+      accessControl?: ReverseProxyAccessControl;
+      advancedSettings?: ReverseProxyAdvancedSettings;
+    }
+  ): Promise<ReverseProxyService> {
+    return this.request<ReverseProxyService>(
+      "PUT",
+      `/reverse-proxies/services/${serviceId}`,
+      data
+    );
+  }
+
   // Accounts
   async getAccounts(): Promise<Account[]> {
     return this.request<Account[]>("GET", "/accounts");
@@ -393,18 +462,35 @@ export class NetBirdClient {
 
   // Fetch all resources for migration
   async getAllResources(): Promise<SourceResources> {
-    const [groups, posture_checks, policies, routes, dns, dns_zones, networksBasic, dns_settings, accounts] =
-      await Promise.all([
-        this.getGroups(),
-        this.getPostureChecks().catch(() => [] as PostureCheck[]),
-        this.getPolicies(),
-        this.getRoutes(),
-        this.getDNSNameserverGroups(),
-        this.getDNSZones().catch(() => [] as DNSZone[]),
-        this.getNetworks(),
-        this.getDNSSettings().catch(() => undefined),
-        this.getAccounts().catch(() => undefined),
-      ]);
+    const [
+      groups,
+      posture_checks,
+      policies,
+      routes,
+      dns,
+      dns_zones,
+      networksBasic,
+      reverse_proxy_domains,
+      reverse_proxy_services,
+      dns_settings,
+      accounts,
+    ] = await Promise.all([
+      this.getGroups(),
+      this.getPostureChecks().catch(() => [] as PostureCheck[]),
+      this.getPolicies(),
+      this.getRoutes(),
+      this.getDNSNameserverGroups(),
+      this.getDNSZones().catch(() => [] as DNSZone[]),
+      this.getNetworks(),
+      this.getReverseProxyDomains().catch(
+        () => [] as ReverseProxyDomain[]
+      ),
+      this.getReverseProxyServices().catch(
+        () => [] as ReverseProxyService[]
+      ),
+      this.getDNSSettings().catch(() => undefined),
+      this.getAccounts().catch(() => undefined),
+    ]);
 
     // Enrich networks with full resource and router objects
     // The list endpoint only returns IDs, but we need full objects for export/import
@@ -441,6 +527,18 @@ export class NetBirdClient {
       };
     }
 
-    return { groups, posture_checks, policies, routes, dns, dns_zones, networks, dns_settings, account_settings };
+    return {
+      groups,
+      posture_checks,
+      policies,
+      routes,
+      dns,
+      dns_zones,
+      networks,
+      reverse_proxy_domains,
+      reverse_proxy_services,
+      dns_settings,
+      account_settings,
+    };
   }
 }

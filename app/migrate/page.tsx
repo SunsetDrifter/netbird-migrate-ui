@@ -6,19 +6,26 @@ import { StepIndicator } from "@/components/step-indicator";
 import { ResourceList } from "@/components/resource-list";
 import { useMigrationState } from "@/hooks/use-migration-state";
 import { buildAutoSelection } from "@/lib/build-auto-selection";
+import { isCrossPlatformMigration } from "@/lib/platform";
 import type { ResourceSelection, SourceResources } from "@/lib/types";
 
 export default function SelectPage() {
   const router = useRouter();
   const {
     source,
+    destination,
     sourceConnected,
     destConnected,
     resources,
     selection,
+    importedSourceUrl,
     setResources,
     setSelection,
   } = useMigrationState();
+
+  const sourceUrl = source?.url || importedSourceUrl || null;
+  const destUrl = destination?.url || null;
+  const crossPlatform = isCrossPlatformMigration(sourceUrl, destUrl);
 
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -52,7 +59,7 @@ export default function SelectPage() {
       const data = await res.json() as SourceResources;
       setResources(data);
 
-      const allValid = buildAutoSelection(data);
+      const allValid = buildAutoSelection(data, { sourceUrl, destUrl });
       if (isRefresh) {
         // Preserve deselections: intersect previous selection with new valid IDs
         const currentSelection = selectionRef.current;
@@ -246,6 +253,61 @@ export default function SelectPage() {
           selectedIds={selection.networks}
           onSelectionChange={(ids) => updateSelection("networks", ids)}
         />
+
+        {crossPlatform &&
+          ((resources.reverse_proxy_domains || []).length > 0 ||
+            (resources.reverse_proxy_services || []).length > 0) && (
+            <div className="border border-nb-gray-800 rounded-lg p-4 bg-nb-gray-920/50">
+              <p className="text-sm text-nb-gray-300">
+                <span className="text-netbird-400 font-medium">
+                  Reverse Proxy not migrated:
+                </span>{" "}
+                domains and services are pinned to a specific proxy cluster,
+                so they can&apos;t be moved between self-hosted and cloud
+                deployments.
+              </p>
+            </div>
+          )}
+
+        {!crossPlatform &&
+          (resources.reverse_proxy_domains || []).filter(
+            (d) => d.id && d.id.length > 0
+          ).length > 0 && (
+            <ResourceList
+              title="Reverse Proxy Domains"
+              items={(resources.reverse_proxy_domains || [])
+                .filter((d) => d.id && d.id.length > 0)
+                .map((d) => ({
+                  id: d.id,
+                  name: d.domain,
+                  subtitle: d.status || undefined,
+                }))}
+              selectedIds={selection.reverse_proxy_domains}
+              onSelectionChange={(ids) =>
+                updateSelection("reverse_proxy_domains", ids)
+              }
+            />
+          )}
+
+        {!crossPlatform &&
+          (resources.reverse_proxy_services || []).filter(
+            (s) => s.source !== "ephemeral"
+          ).length > 0 && (
+            <ResourceList
+              title="Reverse Proxy Services"
+              items={(resources.reverse_proxy_services || [])
+                .filter((s) => s.source !== "ephemeral")
+                .map((s) => ({
+                  id: s.id,
+                  name: s.name,
+                  subtitle: `${s.protocol.toUpperCase()} → ${s.domain}`,
+                }))}
+              selectedIds={selection.reverse_proxy_services}
+              onSelectionChange={(ids) =>
+                updateSelection("reverse_proxy_services", ids)
+              }
+            />
+          )}
 
         {resources.account_settings && (() => {
           const s = resources.account_settings;

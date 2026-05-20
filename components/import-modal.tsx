@@ -42,6 +42,8 @@ const resourceTypeLabels: Record<keyof SourceResources, string> = {
   dns: "DNS Nameservers",
   dns_zones: "DNS Zones",
   networks: "Networks",
+  reverse_proxy_domains: "Reverse Proxy Domains",
+  reverse_proxy_services: "Reverse Proxy Services",
   dns_settings: "DNS Settings",
   account_settings: "Account Settings",
 };

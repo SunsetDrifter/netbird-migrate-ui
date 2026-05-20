@@ -68,6 +68,8 @@ const defaultSelection: ResourceSelection = {
   dns_zones: [],
   dns_settings: [],
   networks: [],
+  reverse_proxy_domains: [],
+  reverse_proxy_services: [],
   account_settings: [],
 };
 

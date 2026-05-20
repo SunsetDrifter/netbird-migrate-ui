@@ -61,6 +61,8 @@ export default function ConnectPage() {
       dns_zones: [],
       dns_settings: [],
       networks: [],
+      reverse_proxy_domains: [],
+      reverse_proxy_services: [],
       account_settings: [],
     });
   };
@@ -139,6 +141,31 @@ export default function ConnectPage() {
     <div>
       <StepIndicator currentStep={1} />
 
+      <div className="mb-6 p-4 border border-nb-gray-800 rounded-lg bg-nb-gray-920/50">
+        <p className="text-sm text-nb-gray-200 font-medium mb-1">
+          How to migrate your NetBird configuration
+        </p>
+        <ol className="text-sm text-nb-gray-300 list-decimal list-inside space-y-1">
+          <li>
+            In each NetBird dashboard, open{" "}
+            <span className="text-nb-gray-100">Team → Service Users</span>, click{" "}
+            <span className="text-nb-gray-100">Create Service User</span> with the{" "}
+            <span className="text-nb-gray-100">Admin</span> role, then{" "}
+            <span className="text-nb-gray-100">Create Access Token</span> and copy it.
+          </li>
+          <li>
+            Paste each token and its management URL into the matching card below, then click{" "}
+            <span className="text-nb-gray-100">Connect</span>. The cloud URL is{" "}
+            <span className="text-nb-gray-100">https://api.netbird.io/api</span>; self-hosted instances use{" "}
+            <span className="text-nb-gray-100">https://&lt;your-host&gt;/api</span>.
+          </li>
+          <li>
+            Once both are connected, click{" "}
+            <span className="text-nb-gray-100">Next: Select Resources</span> to choose what to copy. Nothing is written to the destination until you confirm on the final step.
+          </li>
+        </ol>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2">
         <ConnectionForm
           key={`source-${importedSourceUrl}`}
@@ -147,15 +174,7 @@ export default function ConnectPage() {
           connected={sourceConnected}
           onConnect={handleSourceConnect}
           onDisconnect={handleSourceDisconnect}
-          actionButton={
-            <button
-              onClick={handleExport}
-              disabled={!canExport || exporting}
-              className="w-full px-4 py-2 border border-nb-gray-700 text-nb-gray-200 text-sm font-medium rounded-md hover:bg-nb-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {exporting ? "Fetching..." : "Fetch & Export"}
-            </button>
-          }
+          testId="source-card"
         />
         <ConnectionForm
           key={`dest-${importedDestUrl}`}
@@ -164,25 +183,54 @@ export default function ConnectPage() {
           connected={destConnected}
           onConnect={handleDestConnect}
           onDisconnect={handleDestDisconnect}
-          actionButton={
-            <button
-              onClick={() => setImportModalOpen(true)}
-              disabled={!destConnected}
-              className="w-full px-4 py-2 border border-nb-gray-700 text-nb-gray-200 text-sm font-medium rounded-md hover:bg-nb-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Import Config
-            </button>
-          }
+          testId="dest-card"
         />
       </div>
 
-      <div className="mt-6 p-4 border border-nb-gray-800 rounded-lg bg-nb-gray-920/50">
-        <p className="text-sm text-nb-gray-300">
-          <span className="text-nb-gray-100 font-medium">Option 1:</span> Connect both instances above, then select resources and migrate directly.
+      <div className="mt-6 border border-nb-gray-800 rounded-lg p-6 bg-nb-gray-920">
+        <div className="flex items-start justify-between mb-1">
+          <h3 className="text-lg font-medium text-nb-gray-100">
+            Offline workflow
+          </h3>
+          <span className="text-xs text-nb-gray-500 mt-1">
+            Alternative to direct migration
+          </span>
+        </div>
+        <p className="text-sm text-nb-gray-300 mb-4">
+          Save the source configuration to a JSON file, then apply it to a
+          destination on a different network. Useful for self-hosted instances
+          that aren&apos;t reachable from the same machine.
         </p>
-        <p className="text-sm text-nb-gray-300 mt-2">
-          <span className="text-nb-gray-100 font-medium">Option 2:</span> Use <span className="text-nb-gray-200">Fetch & Export</span> to save source config to a file, then <span className="text-nb-gray-200">Import Config</span> on a destination instance. Ideal for self-hosted deployments.
-        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <button
+              onClick={handleExport}
+              disabled={!canExport || exporting}
+              className="px-3 py-1.5 border border-nb-gray-700 text-nb-gray-200 text-sm rounded-md hover:bg-nb-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {exporting ? "Fetching..." : "Fetch & Export"}
+            </button>
+            <p className="mt-2 text-xs text-nb-gray-500">
+              {canExport
+                ? "Downloads source config as JSON."
+                : "Connect the source instance first."}
+            </p>
+          </div>
+          <div>
+            <button
+              onClick={() => setImportModalOpen(true)}
+              disabled={!destConnected}
+              className="px-3 py-1.5 border border-nb-gray-700 text-nb-gray-200 text-sm rounded-md hover:bg-nb-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Import Config
+            </button>
+            <p className="mt-2 text-xs text-nb-gray-500">
+              {destConnected
+                ? "Loads a previously exported JSON file."
+                : "Connect the destination instance first."}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="mt-4 border border-nb-gray-800 rounded-lg bg-nb-gray-920/50">
@@ -211,6 +259,9 @@ export default function ConnectPage() {
               <li><span className="text-nb-gray-100">Group memberships</span> — groups are created empty</li>
               <li><span className="text-nb-gray-100">Setup key secrets</span> — new keys generated, must redistribute</li>
               <li><span className="text-nb-gray-100">Personal Access Tokens</span> — must be recreated manually</li>
+              <li><span className="text-nb-gray-100">Ephemeral Reverse Proxy services</span> — CLI-exposed services are skipped (they're short-lived)</li>
+              <li><span className="text-nb-gray-100">Reverse Proxy across platforms</span> — domains/services are pinned to a specific cluster, so they can&apos;t move between self-hosted and cloud</li>
+              <li><span className="text-nb-gray-100">Reverse Proxy TLS certificates</span> — managed by the destination cluster, not migrated</li>
               <li><span className="text-nb-gray-100">Restrict dashboard for regular users</span> — Settings → Permissions</li>
               <li><span className="text-nb-gray-100">User group propagation</span> — Settings → Groups</li>
             </ul>

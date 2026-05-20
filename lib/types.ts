@@ -28,8 +28,9 @@ export interface Group {
   peers_count: number;
   resources_count: number;
   issued: string;
-  peers: { id: string; name: string }[];
-  resources: { id: string; type: string }[];
+  // NetBird API returns null (not []) when empty.
+  peers?: { id: string; name: string }[] | null;
+  resources?: { id: string; type: string }[] | null;
 }
 
 export interface PostureCheck {
@@ -39,6 +40,11 @@ export interface PostureCheck {
   checks: Record<string, unknown>;
 }
 
+export interface PolicyRuleResourceRef {
+  id: string;
+  type: string;
+}
+
 export interface PolicyRule {
   id: string;
   name: string;
@@ -46,10 +52,12 @@ export interface PolicyRule {
   action: string;
   protocol: string;
   bidirectional: boolean;
-  sources: GroupRef[];
-  destinations: GroupRef[];
-  ports: string[];
-  source_posture_checks?: string[];
+  // NetBird API returns null (not []) for empty sources/destinations.
+  sources?: GroupRef[] | null;
+  destinations?: GroupRef[] | null;
+  ports?: string[] | null;
+  source_posture_checks?: string[] | null;
+  destinationResource?: PolicyRuleResourceRef | null;
 }
 
 export interface Policy {
@@ -58,7 +66,7 @@ export interface Policy {
   description: string;
   enabled: boolean;
   rules: PolicyRule[];
-  source_posture_checks?: string[];
+  source_posture_checks?: string[] | null;
 }
 
 export interface Route {
@@ -124,7 +132,8 @@ export interface NetworkResource {
   description: string;
   type: string;
   address: string;
-  groups: GroupRef[];
+  // NetBird API returns null (not []) when empty.
+  groups?: GroupRef[] | null;
 }
 
 export interface NetworkRouter {
@@ -143,6 +152,66 @@ export interface Network {
   resources: NetworkResource[];
   routing_peers_count: number;
   policies: string[];
+}
+
+// Reverse Proxy types
+
+export type ReverseProxyTargetType = "peer" | "host" | "domain" | "subnet";
+
+export interface ReverseProxyTarget {
+  targetIP?: string;
+  targetHost?: string;
+  targetPort: number;
+  type: ReverseProxyTargetType;
+}
+
+export interface ReverseProxyAuthentication {
+  password?: string;
+  pin?: string;
+  userGroups?: string[];
+  headerAuth?: Record<string, unknown>;
+}
+
+export interface ReverseProxyAccessControl {
+  allowedIPCIDRs?: string[];
+  blockedIPCIDRs?: string[];
+  countries?: string[];
+  integrations?: Record<string, unknown>;
+}
+
+export interface ReverseProxyAdvancedSettings {
+  redirectHttpToHttps?: boolean;
+  hostHeader?: string;
+  proxyProtocol?: boolean;
+  sessionTimeout?: number;
+}
+
+export interface ReverseProxyDomain {
+  id: string;
+  domain: string;
+  status?: string;
+  validated?: boolean;
+}
+
+export type ReverseProxyServiceSource = "permanent" | "ephemeral";
+
+export interface ReverseProxyService {
+  id: string;
+  serviceId?: string;
+  name: string;
+  description?: string;
+  domain: string;
+  protocol: string;
+  targets: ReverseProxyTarget[];
+  authentication?: ReverseProxyAuthentication;
+  accessControl?: ReverseProxyAccessControl;
+  source: ReverseProxyServiceSource;
+  sourcePeer?: string;
+  sourcePort?: number;
+  ttl?: string;
+  advancedSettings?: ReverseProxyAdvancedSettings;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // Account settings types
@@ -179,7 +248,9 @@ export type ResourceType =
   | "routes"
   | "dns"
   | "dns_zones"
-  | "networks";
+  | "networks"
+  | "reverse_proxy_domains"
+  | "reverse_proxy_services";
 
 export interface SourceResources {
   groups: Group[];
@@ -189,6 +260,8 @@ export interface SourceResources {
   dns: DNSNameserverGroup[];
   dns_zones: DNSZone[];
   networks: Network[];
+  reverse_proxy_domains: ReverseProxyDomain[];
+  reverse_proxy_services: ReverseProxyService[];
   dns_settings?: DNSSettings;
   account_settings?: AccountSettings;
 }
@@ -202,6 +275,8 @@ export interface ResourceSelection {
   dns_zones: string[];
   dns_settings: string[];
   networks: string[];
+  reverse_proxy_domains: string[];
+  reverse_proxy_services: string[];
   account_settings: string[];
 }
 

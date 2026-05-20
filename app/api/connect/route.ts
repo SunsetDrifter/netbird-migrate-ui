@@ -2,27 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { NetBirdClient } from "@/lib/netbird-client";
 import { validateUrl } from "@/lib/url-validator";
 import { checkRateLimit } from "@/lib/rate-limiter";
+import { ConnectRequestSchema, formatZodError } from "@/lib/schemas";
 
 export async function POST(req: NextRequest) {
   const rateLimited = checkRateLimit(req, 20);
   if (rateLimited) return rateLimited;
 
   try {
-    const { token, url } = await req.json();
-
-    if (!token || typeof token !== "string" || token.length > 500) {
+    const body = await req.json().catch(() => null);
+    const parsed = ConnectRequestSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid token" },
+        { error: formatZodError(parsed.error) },
         { status: 400 }
       );
     }
-
-    if (!url || typeof url !== "string") {
-      return NextResponse.json(
-        { error: "Invalid URL" },
-        { status: 400 }
-      );
-    }
+    const { token, url } = parsed.data;
 
     const urlCheck = validateUrl(url);
     if (!urlCheck.valid) {

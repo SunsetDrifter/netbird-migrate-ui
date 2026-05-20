@@ -8,6 +8,8 @@ import type {
   DNSNameserverGroup,
   DNSZone,
   Network,
+  ReverseProxyDomain,
+  ReverseProxyService,
   Conflict,
   ResourceSelection,
   SourceResources,
@@ -90,6 +92,16 @@ export class MigrationEngine {
       conflictMap
     );
     await this.migrateNetworks(resources.networks, selection.networks, conflictMap);
+    await this.migrateReverseProxyDomains(
+      resources.reverse_proxy_domains || [],
+      selection.reverse_proxy_domains || [],
+      conflictMap
+    );
+    await this.migrateReverseProxyServices(
+      resources.reverse_proxy_services || [],
+      selection.reverse_proxy_services || [],
+      conflictMap
+    );
     await this.migrateAuthSettings(resources, selection.account_settings || []);
 
     this.emit({
@@ -318,18 +330,51 @@ export class MigrationEngine {
       }
 
       try {
-        const rules = policy.rules.map((rule) => ({
-          name: rule.name,
-          enabled: rule.enabled,
-          action: rule.action,
-          protocol: rule.protocol,
-          bidirectional: rule.bidirectional,
-          sources: this.idMap.mapGroupIds(rule.sources.map((s) => s.id)),
-          destinations: this.idMap.mapGroupIds(
-            rule.destinations.map((d) => d.id)
-          ),
-          ports: rule.ports || [],
-        }));
+        const rules = policy.rules.map((rule) => {
+          // Newer NetBird feature: rule destination can be a single network
+          // resource. Policies are migrated before networks (we don't track
+          // network-resource ID mappings), so the destination would be a
+          // dangling source-side ID. Emit a clear warning so the operator
+          // knows to recreate this rule manually.
+          if (rule.destinationResource) {
+            this.emit({
+              type: "progress",
+              resourceType: "policies",
+              resourceName: policy.name,
+              message: `Rule '${rule.name}' references a network resource (${rule.destinationResource.id}) as destination; not migrated. Recreate this rule manually after the network is migrated.`,
+            });
+          }
+          return {
+            name: rule.name,
+            enabled: rule.enabled,
+            action: rule.action,
+            protocol: rule.protocol,
+            bidirectional: rule.bidirectional,
+            sources: this.idMap.mapGroupIds(
+              (rule.sources ?? []).map((s) => s.id)
+            ),
+            destinations: this.idMap.mapGroupIds(
+              (rule.destinations ?? []).map((d) => d.id)
+            ),
+            ports: rule.ports ?? [],
+          };
+        });
+
+        // Skip policies whose every rule would end up with empty sources OR
+        // empty destinations after ID mapping — NetBird rejects those.
+        const hasUsableRule = rules.some(
+          (r) => r.sources.length > 0 && r.destinations.length > 0
+        );
+        if (!hasUsableRule) {
+          this.result.skipped++;
+          this.emit({
+            type: "progress",
+            resourceType: "policies",
+            resourceName: policy.name,
+            message: `Skipped policy '${policy.name}': no rule has both sources and destinations after ID mapping (likely references a network resource or unmigrated group).`,
+          });
+          continue;
+        }
 
         const postureChecks = policy.source_posture_checks
           ? this.idMap.mapPostureCheckIds(policy.source_posture_checks)
@@ -816,6 +861,231 @@ export class MigrationEngine {
           resourceName: network.name,
           message: `Failed: ${network.name}: ${errMsg}`,
         });
+      }
+    }
+  }
+
+  private async migrateReverseProxyDomains(
+    domains: ReverseProxyDomain[],
+    selectedIds: string[],
+    conflictMap: Map<string, Conflict>
+  ) {
+    if (selectedIds.length === 0) return;
+
+    const selected = domains.filter((d) => selectedIds.includes(d.id));
+    if (selected.length === 0) return;
+
+    // Pre-fetch destination domains for idempotent skip
+    let destDomainNames = new Set<string>();
+    try {
+      const destDomains = await this.dest.getReverseProxyDomains();
+      destDomainNames = new Set(
+        destDomains.map((d) => d.domain.toLowerCase())
+      );
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      this.emit({
+        type: "error",
+        resourceType: "reverse_proxy_domains",
+        message: `Failed to fetch destination reverse proxy domains: ${errMsg}`,
+      });
+      return;
+    }
+
+    for (const domain of selected) {
+      const { skip } = this.shouldSkip(
+        "reverse_proxy_domains",
+        domain.id,
+        conflictMap
+      );
+
+      if (skip) {
+        this.result.skipped++;
+        this.emit({
+          type: "progress",
+          resourceType: "reverse_proxy_domains",
+          resourceName: domain.domain,
+          message: `Skipped domain: ${domain.domain}`,
+        });
+        continue;
+      }
+
+      if (destDomainNames.has(domain.domain.toLowerCase())) {
+        this.result.skipped++;
+        this.emit({
+          type: "progress",
+          resourceType: "reverse_proxy_domains",
+          resourceName: domain.domain,
+          message: `Domain already exists in destination: ${domain.domain}`,
+        });
+        continue;
+      }
+
+      try {
+        await this.dest.createReverseProxyDomain({ domain: domain.domain });
+        destDomainNames.add(domain.domain.toLowerCase());
+        this.result.created++;
+        this.emit({
+          type: "success",
+          resourceType: "reverse_proxy_domains",
+          resourceName: domain.domain,
+          message: `Created domain: ${domain.domain}`,
+        });
+      } catch (err) {
+        if (this.isAlreadyExistsError(err)) {
+          this.result.skipped++;
+          destDomainNames.add(domain.domain.toLowerCase());
+          this.emit({
+            type: "progress",
+            resourceType: "reverse_proxy_domains",
+            resourceName: domain.domain,
+            message: `Already exists, skipped domain: ${domain.domain}`,
+          });
+        } else {
+          this.result.failed++;
+          const errMsg = err instanceof Error ? err.message : String(err);
+          this.result.errors.push({
+            resourceType: "reverse_proxy_domains",
+            name: domain.domain,
+            error: errMsg,
+          });
+          this.emit({
+            type: "error",
+            resourceType: "reverse_proxy_domains",
+            resourceName: domain.domain,
+            message: `Failed: ${domain.domain}: ${errMsg}`,
+          });
+        }
+      }
+    }
+  }
+
+  private async migrateReverseProxyServices(
+    services: ReverseProxyService[],
+    selectedIds: string[],
+    conflictMap: Map<string, Conflict>
+  ) {
+    if (selectedIds.length === 0) return;
+
+    const selected = services.filter((s) => selectedIds.includes(s.id));
+    if (selected.length === 0) return;
+
+    // Pre-fetch destination services to support skip / overwrite
+    let destServiceByName = new Map<string, ReverseProxyService>();
+    try {
+      const destServices = await this.dest.getReverseProxyServices();
+      destServiceByName = new Map(
+        destServices.map((s) => [s.name.toLowerCase(), s])
+      );
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      this.emit({
+        type: "error",
+        resourceType: "reverse_proxy_services",
+        message: `Failed to fetch destination reverse proxy services: ${errMsg}`,
+      });
+      return;
+    }
+
+    for (const service of selected) {
+      // Skip ephemeral services — they're short-lived CLI exposures
+      if (service.source === "ephemeral") {
+        this.result.skipped++;
+        this.emit({
+          type: "progress",
+          resourceType: "reverse_proxy_services",
+          resourceName: service.name,
+          message: `Skipped ephemeral service: ${service.name}`,
+        });
+        continue;
+      }
+
+      const { skip, overwrite, destId } = this.shouldSkip(
+        "reverse_proxy_services",
+        service.id,
+        conflictMap
+      );
+
+      if (skip) {
+        this.result.skipped++;
+        this.emit({
+          type: "progress",
+          resourceType: "reverse_proxy_services",
+          resourceName: service.name,
+          message: `Skipped service: ${service.name}`,
+        });
+        continue;
+      }
+
+      // Safety check: if not overwriting and same-named service exists, skip
+      if (!overwrite && destServiceByName.has(service.name.toLowerCase())) {
+        this.result.skipped++;
+        this.emit({
+          type: "progress",
+          resourceType: "reverse_proxy_services",
+          resourceName: service.name,
+          message: `Service already exists in destination: ${service.name}`,
+        });
+        continue;
+      }
+
+      try {
+        const mappedAuth = service.authentication
+          ? {
+              ...service.authentication,
+              userGroups: service.authentication.userGroups
+                ? this.idMap.mapGroupIds(service.authentication.userGroups)
+                : undefined,
+            }
+          : undefined;
+
+        const data = {
+          name: service.name,
+          description: service.description,
+          domain: service.domain,
+          protocol: service.protocol,
+          targets: service.targets,
+          authentication: mappedAuth,
+          accessControl: service.accessControl,
+          advancedSettings: service.advancedSettings,
+        };
+
+        if (overwrite && destId) {
+          await this.dest.updateReverseProxyService(destId, data);
+        } else {
+          await this.dest.createReverseProxyService(data);
+        }
+        this.result.created++;
+        this.emit({
+          type: "success",
+          resourceType: "reverse_proxy_services",
+          resourceName: service.name,
+          message: `${overwrite ? "Updated" : "Created"} service: ${service.name}`,
+        });
+      } catch (err) {
+        if (this.isAlreadyExistsError(err)) {
+          this.result.skipped++;
+          this.emit({
+            type: "progress",
+            resourceType: "reverse_proxy_services",
+            resourceName: service.name,
+            message: `Already exists, skipped service: ${service.name}`,
+          });
+        } else {
+          this.result.failed++;
+          const errMsg = err instanceof Error ? err.message : String(err);
+          this.result.errors.push({
+            resourceType: "reverse_proxy_services",
+            name: service.name,
+            error: errMsg,
+          });
+          this.emit({
+            type: "error",
+            resourceType: "reverse_proxy_services",
+            resourceName: service.name,
+            message: `Failed: ${service.name}: ${errMsg}`,
+          });
+        }
       }
     }
   }
