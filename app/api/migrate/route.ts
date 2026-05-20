@@ -3,21 +3,28 @@ import { NetBirdClient } from "@/lib/netbird-client";
 import { MigrationEngine } from "@/lib/migration-engine";
 import { validateUrl } from "@/lib/url-validator";
 import { checkRateLimit } from "@/lib/rate-limiter";
-import type {
-  SourceResources,
-  ResourceSelection,
-  Conflict,
-  MigrationEvent,
-} from "@/lib/types";
+import { MigrateRequestSchema, formatZodError } from "@/lib/schemas";
+import type { MigrationEvent } from "@/lib/types";
 
 const SSE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+
+function jsonError(status: number, error: string): Response {
+  return new Response(JSON.stringify({ error }), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
 
 export async function POST(req: NextRequest) {
   const rateLimited = checkRateLimit(req, 5);
   if (rateLimited) return rateLimited;
 
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
+    const parsed = MigrateRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return jsonError(400, formatZodError(parsed.error));
+    }
     const {
       sourceToken,
       sourceUrl,
@@ -26,80 +33,20 @@ export async function POST(req: NextRequest) {
       resources,
       selection,
       conflicts,
-    } = body as {
-      sourceToken: string;
-      sourceUrl: string;
-      destToken: string;
-      destUrl: string;
-      resources: SourceResources;
-      selection: ResourceSelection;
-      conflicts: Conflict[];
-    };
+    } = parsed.data;
 
-    if (!destToken || typeof destToken !== "string" || destToken.length > 500) {
-      return new Response(
-        JSON.stringify({ error: "Invalid destination token" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
+    const hasSourceCredentials = !!(sourceToken && sourceUrl);
 
-    if (!destUrl || typeof destUrl !== "string") {
-      return new Response(
-        JSON.stringify({ error: "Invalid destination URL" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    const hasSourceCredentials = sourceToken && sourceUrl;
-
-    if (hasSourceCredentials) {
-      if (typeof sourceToken !== "string" || sourceToken.length > 500) {
-        return new Response(
-          JSON.stringify({ error: "Invalid source token" }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
-        );
-      }
+    if (hasSourceCredentials && sourceUrl) {
       const sourceUrlCheck = validateUrl(sourceUrl);
       if (!sourceUrlCheck.valid) {
-        return new Response(
-          JSON.stringify({ error: `Source URL: ${sourceUrlCheck.error}` }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
-        );
+        return jsonError(400, `Source URL: ${sourceUrlCheck.error}`);
       }
-    } else if (!resources || typeof resources !== "object" || !Array.isArray(resources.groups)) {
-      return new Response(
-        JSON.stringify({ error: "Source credentials or pre-fetched resources required" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
     }
 
     const destUrlCheck = validateUrl(destUrl);
     if (!destUrlCheck.valid) {
-      return new Response(
-        JSON.stringify({ error: `Destination URL: ${destUrlCheck.error}` }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!resources || typeof resources !== "object") {
-      return new Response(
-        JSON.stringify({ error: "Invalid resources" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!selection || typeof selection !== "object") {
-      return new Response(
-        JSON.stringify({ error: "Invalid selection" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!Array.isArray(conflicts)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid conflicts" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
+      return jsonError(400, `Destination URL: ${destUrlCheck.error}`);
     }
 
     const abortController = new AbortController();
@@ -108,9 +55,10 @@ export async function POST(req: NextRequest) {
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
-        const source = hasSourceCredentials
-          ? new NetBirdClient(sourceToken, sourceUrl)
-          : new NetBirdClient("", "");
+        const source =
+          hasSourceCredentials && sourceToken && sourceUrl
+            ? new NetBirdClient(sourceToken, sourceUrl)
+            : new NetBirdClient("", "");
         const dest = new NetBirdClient(destToken, destUrl);
 
         const emit = (event: MigrationEvent) => {
