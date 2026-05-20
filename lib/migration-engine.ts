@@ -331,9 +331,9 @@ export class MigrationEngine {
 
       try {
         const rules = policy.rules.map((rule) => {
-          // Newer NetBird feature: rule destination can be a single network
-          // resource. Policies are migrated before networks (we don't track
-          // network-resource ID mappings), so the destination would be a
+          // Newer NetBird feature: rule source/destination can be a single
+          // network resource. Policies are migrated before networks (we don't
+          // track network-resource ID mappings), so the reference would be a
           // dangling source-side ID. Emit a clear warning so the operator
           // knows to recreate this rule manually.
           if (rule.destinationResource) {
@@ -344,7 +344,48 @@ export class MigrationEngine {
               message: `Rule '${rule.name}' references a network resource (${rule.destinationResource.id}) as destination; not migrated. Recreate this rule manually after the network is migrated.`,
             });
           }
-          return {
+          if (rule.sourceResource) {
+            this.emit({
+              type: "progress",
+              resourceType: "policies",
+              resourceName: policy.name,
+              message: `Rule '${rule.name}' references a network resource (${rule.sourceResource.id}) as source; not migrated. Recreate this rule manually after the network is migrated.`,
+            });
+          }
+
+          // authorized_groups: keys are group IDs (translate via idMap), values
+          // are local user IDs. We don't migrate users, so user IDs are passed
+          // through and the operator must verify they exist in the destination.
+          let authorizedGroups: Record<string, string[]> | undefined;
+          if (rule.authorized_groups && Object.keys(rule.authorized_groups).length > 0) {
+            authorizedGroups = {};
+            for (const [srcGroupId, userIds] of Object.entries(rule.authorized_groups)) {
+              const [destGroupId] = this.idMap.mapGroupIds([srcGroupId]);
+              if (destGroupId) {
+                authorizedGroups[destGroupId] = userIds;
+              }
+            }
+            this.emit({
+              type: "progress",
+              resourceType: "policies",
+              resourceName: policy.name,
+              message: `Rule '${rule.name}' has authorized_groups with local user IDs; verify those users exist in the destination account.`,
+            });
+          }
+
+          const built: {
+            name: string;
+            description?: string;
+            enabled: boolean;
+            action: string;
+            protocol: string;
+            bidirectional: boolean;
+            sources: string[];
+            destinations: string[];
+            ports: string[];
+            port_ranges?: { start: number; end: number }[];
+            authorized_groups?: Record<string, string[]>;
+          } = {
             name: rule.name,
             enabled: rule.enabled,
             action: rule.action,
@@ -358,6 +399,12 @@ export class MigrationEngine {
             ),
             ports: rule.ports ?? [],
           };
+          if (rule.description !== undefined) built.description = rule.description;
+          if (rule.port_ranges && rule.port_ranges.length > 0) {
+            built.port_ranges = rule.port_ranges;
+          }
+          if (authorizedGroups) built.authorized_groups = authorizedGroups;
+          return built;
         });
 
         // Skip policies whose every rule would end up with empty sources OR

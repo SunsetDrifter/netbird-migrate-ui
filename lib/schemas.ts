@@ -44,9 +44,15 @@ const PolicyRuleResourceRefSchema = z.object({
   type: z.string(),
 });
 
+const PolicyRulePortRangeSchema = z.object({
+  start: z.number(),
+  end: z.number(),
+});
+
 const PolicyRuleSchema = z.object({
   id: z.string(),
   name: z.string(),
+  description: z.string().optional(),
   enabled: z.boolean(),
   action: z.string(),
   protocol: z.string(),
@@ -55,9 +61,13 @@ const PolicyRuleSchema = z.object({
   sources: z.array(GroupRefSchema).nullish(),
   destinations: z.array(GroupRefSchema).nullish(),
   ports: z.array(z.string()).nullish(),
+  port_ranges: z.array(PolicyRulePortRangeSchema).nullish(),
   source_posture_checks: z.array(z.string()).nullish(),
-  // Newer NetBird feature: a single network resource as the destination.
+  // Newer NetBird feature: a single network resource as the source/destination.
+  sourceResource: PolicyRuleResourceRefSchema.nullish(),
   destinationResource: PolicyRuleResourceRefSchema.nullish(),
+  // Map of user-group ID -> list of local user IDs.
+  authorized_groups: z.record(z.string(), z.array(z.string())).nullish(),
 });
 
 const PolicySchema = z.object({

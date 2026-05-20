@@ -45,9 +45,15 @@ export interface PolicyRuleResourceRef {
   type: string;
 }
 
+export interface PolicyRulePortRange {
+  start: number;
+  end: number;
+}
+
 export interface PolicyRule {
   id: string;
   name: string;
+  description?: string;
   enabled: boolean;
   action: string;
   protocol: string;
@@ -56,8 +62,12 @@ export interface PolicyRule {
   sources?: GroupRef[] | null;
   destinations?: GroupRef[] | null;
   ports?: string[] | null;
+  port_ranges?: PolicyRulePortRange[] | null;
   source_posture_checks?: string[] | null;
+  sourceResource?: PolicyRuleResourceRef | null;
   destinationResource?: PolicyRuleResourceRef | null;
+  // Map of user-group IDs to lists of local user IDs.
+  authorized_groups?: Record<string, string[]> | null;
 }
 
 export interface Policy {

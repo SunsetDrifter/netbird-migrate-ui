@@ -804,6 +804,178 @@ describe("MigrationEngine — real-world API shape quirks", () => {
       )
     ).toBe(true);
   });
+
+  it("preserves port_ranges on policy rules", async () => {
+    const resources = makeFullSourceResources({
+      groups: [makeGroup({ id: "g1", name: "Devs" })],
+      posture_checks: [],
+      policies: [
+        makePolicy({
+          id: "pol-1",
+          name: "Range Allow",
+          rules: [
+            {
+              id: "rule-1",
+              name: "r",
+              enabled: true,
+              action: "accept",
+              protocol: "tcp",
+              bidirectional: true,
+              sources: [{ id: "g1", name: "Devs" }],
+              destinations: [{ id: "g1", name: "Devs" }],
+              ports: [],
+              port_ranges: [
+                { start: 8000, end: 8080 },
+                { start: 9000, end: 9000 },
+              ],
+            },
+          ],
+        }),
+      ],
+      routes: [],
+      dns: [],
+      dns_zones: [],
+      networks: [],
+      reverse_proxy_domains: [],
+      reverse_proxy_services: [],
+      dns_settings: { disabled_management_groups: [] },
+      account_settings: undefined,
+    });
+
+    const dest = new RecordingMockClient();
+    const { engine } = makeEngine({ dest });
+    await engine.execute(
+      resources,
+      { ...fullSelection(resources), account_settings: [] },
+      []
+    );
+
+    const body = dest.callsOf("createPolicy")[0].args[0] as {
+      rules: { port_ranges?: { start: number; end: number }[] }[];
+    };
+    expect(body.rules[0].port_ranges).toEqual([
+      { start: 8000, end: 8080 },
+      { start: 9000, end: 9000 },
+    ]);
+  });
+
+  it("translates authorized_groups keys via the group id map", async () => {
+    const resources = makeFullSourceResources({
+      groups: [
+        makeGroup({ id: "src-g1", name: "Devs" }),
+        makeGroup({ id: "src-g2", name: "Admins" }),
+      ],
+      posture_checks: [],
+      policies: [
+        makePolicy({
+          id: "pol-1",
+          name: "Auth Allow",
+          rules: [
+            {
+              id: "rule-1",
+              name: "r",
+              enabled: true,
+              action: "accept",
+              protocol: "tcp",
+              bidirectional: true,
+              sources: [{ id: "src-g1", name: "Devs" }],
+              destinations: [{ id: "src-g1", name: "Devs" }],
+              ports: ["22"],
+              authorized_groups: {
+                "src-g1": ["user-a", "user-b"],
+                "src-g2": ["user-c"],
+              },
+            },
+          ],
+        }),
+      ],
+      routes: [],
+      dns: [],
+      dns_zones: [],
+      networks: [],
+      reverse_proxy_domains: [],
+      reverse_proxy_services: [],
+      dns_settings: { disabled_management_groups: [] },
+      account_settings: undefined,
+    });
+
+    const dest = new RecordingMockClient();
+    const { engine, events } = makeEngine({ dest });
+    await engine.execute(
+      resources,
+      { ...fullSelection(resources), account_settings: [] },
+      []
+    );
+
+    const body = dest.callsOf("createPolicy")[0].args[0] as {
+      rules: { authorized_groups?: Record<string, string[]> }[];
+    };
+    const ag = body.rules[0].authorized_groups!;
+    // Keys translated to destination group IDs.
+    expect(Object.keys(ag).sort()).toEqual(["dest-grp-1", "dest-grp-2"]);
+    for (const key of Object.keys(ag)) {
+      expect(key.startsWith("src-")).toBe(false);
+    }
+    // Values (local user IDs) are passed through unchanged.
+    expect(ag["dest-grp-1"]).toEqual(["user-a", "user-b"]);
+    expect(ag["dest-grp-2"]).toEqual(["user-c"]);
+    // Operator gets a warning about user-id verification.
+    expect(
+      events.some((e) =>
+        e.message?.includes("local user IDs")
+      )
+    ).toBe(true);
+  });
+
+  it("emits a warning when a rule source is a network resource", async () => {
+    const resources = makeFullSourceResources({
+      groups: [makeGroup({ id: "g1", name: "Devs" })],
+      posture_checks: [],
+      policies: [
+        makePolicy({
+          id: "pol-1",
+          name: "From Resource",
+          rules: [
+            {
+              id: "rule-1",
+              name: "r",
+              enabled: true,
+              action: "accept",
+              protocol: "tcp",
+              bidirectional: false,
+              sources: null,
+              sourceResource: { id: "nres-1", type: "host" },
+              destinations: [{ id: "g1", name: "Devs" }],
+              ports: ["443"],
+            },
+          ],
+        }),
+      ],
+      routes: [],
+      dns: [],
+      dns_zones: [],
+      networks: [],
+      reverse_proxy_domains: [],
+      reverse_proxy_services: [],
+      dns_settings: { disabled_management_groups: [] },
+      account_settings: undefined,
+    });
+
+    const dest = new RecordingMockClient();
+    const { engine, events } = makeEngine({ dest });
+    await engine.execute(
+      resources,
+      { ...fullSelection(resources), account_settings: [] },
+      []
+    );
+
+    expect(
+      events.some((e) =>
+        e.message?.includes("references a network resource") &&
+        e.message?.includes("as source")
+      )
+    ).toBe(true);
+  });
 });
 
 describe("MigrationEngine — account settings", () => {

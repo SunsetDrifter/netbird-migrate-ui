@@ -161,6 +161,7 @@ export class NetBirdClient {
     enabled: boolean;
     rules: {
       name: string;
+      description?: string;
       enabled: boolean;
       action: string;
       protocol: string;
@@ -168,6 +169,8 @@ export class NetBirdClient {
       sources: string[];
       destinations: string[];
       ports: string[];
+      port_ranges?: { start: number; end: number }[];
+      authorized_groups?: Record<string, string[]>;
     }[];
     source_posture_checks?: string[];
   }): Promise<Policy> {
