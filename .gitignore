@@ -9,6 +9,7 @@ next-env.d.ts
 .claude/
 .cursor/
 tests/e2e/.playwright-report
+tests/e2e/screenshots/
 playwright-report/
 test-results/
 coverage/
