@@ -8,3 +8,7 @@ next-env.d.ts
 .DS_Store
 .claude/
 .cursor/
+tests/e2e/.playwright-report
+playwright-report/
+test-results/
+coverage/
