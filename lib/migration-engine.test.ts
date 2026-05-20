@@ -297,6 +297,88 @@ describe("MigrationEngine — ID mapping", () => {
     expect(body.groups).toHaveLength(1);
   });
 
+  it("translates source group IDs in route access_control_groups", async () => {
+    const resources = makeFullSourceResources({
+      groups: [
+        makeGroup({ id: "g1", name: "Devs" }),
+        makeGroup({ id: "g2", name: "Audit" }),
+      ],
+      posture_checks: [],
+      policies: [],
+      routes: [
+        makeRoute({
+          id: "r1",
+          name: "r",
+          peer_groups: ["g1"],
+          groups: ["g1"],
+          access_control_groups: ["g2"],
+        }),
+      ],
+      dns: [],
+      dns_zones: [],
+      networks: [],
+      reverse_proxy_domains: [],
+      reverse_proxy_services: [],
+      dns_settings: { disabled_management_groups: [] },
+      account_settings: undefined,
+    });
+
+    const dest = new RecordingMockClient();
+    const { engine } = makeEngine({ dest });
+
+    await engine.execute(
+      resources,
+      { ...fullSelection(resources), account_settings: [] },
+      []
+    );
+
+    const body = dest.callsOf("createRoute")[0].args[0] as {
+      access_control_groups?: string[];
+    };
+    expect(body.access_control_groups).toBeDefined();
+    expect(body.access_control_groups!).toHaveLength(1);
+    expect(body.access_control_groups![0].startsWith("g")).toBe(false);
+  });
+
+  it("preserves skip_auto_apply on routes", async () => {
+    const resources = makeFullSourceResources({
+      groups: [makeGroup({ id: "g1", name: "Devs" })],
+      posture_checks: [],
+      policies: [],
+      routes: [
+        makeRoute({
+          id: "r1",
+          name: "exit",
+          network: "0.0.0.0/0",
+          peer_groups: ["g1"],
+          groups: ["g1"],
+          skip_auto_apply: true,
+        }),
+      ],
+      dns: [],
+      dns_zones: [],
+      networks: [],
+      reverse_proxy_domains: [],
+      reverse_proxy_services: [],
+      dns_settings: { disabled_management_groups: [] },
+      account_settings: undefined,
+    });
+
+    const dest = new RecordingMockClient();
+    const { engine } = makeEngine({ dest });
+
+    await engine.execute(
+      resources,
+      { ...fullSelection(resources), account_settings: [] },
+      []
+    );
+
+    const body = dest.callsOf("createRoute")[0].args[0] as {
+      skip_auto_apply?: boolean;
+    };
+    expect(body.skip_auto_apply).toBe(true);
+  });
+
   it("translates IDs in DNS nameserver group references", async () => {
     const resources = makeFullSourceResources({
       groups: [makeGroup({ id: "g1", name: "Devs" })],

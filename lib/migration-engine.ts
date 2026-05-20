@@ -492,7 +492,21 @@ export class MigrationEngine {
       }
 
       try {
-        const data = {
+        const data: {
+          name: string;
+          description: string;
+          network_id: string;
+          network: string;
+          enabled: boolean;
+          peer_groups: string[];
+          metric: number;
+          masquerade: boolean;
+          groups: string[];
+          keep_route: boolean;
+          skip_auto_apply?: boolean;
+          domains?: string[];
+          access_control_groups?: string[];
+        } = {
           name: route.name,
           description: route.description,
           network_id: route.network_id,
@@ -505,6 +519,12 @@ export class MigrationEngine {
           keep_route: route.keep_route,
           domains: route.domains,
         };
+        if (route.skip_auto_apply !== undefined) {
+          data.skip_auto_apply = route.skip_auto_apply;
+        }
+        if (route.access_control_groups && route.access_control_groups.length > 0) {
+          data.access_control_groups = this.idMap.mapGroupIds(route.access_control_groups);
+        }
 
         if (overwrite && destId) {
           await this.dest.updateRoute(destId, data);

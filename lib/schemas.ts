@@ -85,6 +85,7 @@ const RouteSchema = z.object({
   description: z.string(),
   network_id: z.string(),
   network: z.string(),
+  network_type: z.string().optional(),
   enabled: z.boolean(),
   peer: z.string(),
   peer_groups: z.array(z.string()),
@@ -92,6 +93,7 @@ const RouteSchema = z.object({
   masquerade: z.boolean(),
   groups: z.array(z.string()),
   keep_route: z.boolean(),
+  skip_auto_apply: z.boolean().optional(),
   domains: z.array(z.string()).optional(),
   access_control_groups: z.array(z.string()).optional(),
 });

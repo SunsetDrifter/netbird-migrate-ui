@@ -85,6 +85,7 @@ export interface Route {
   description: string;
   network_id: string;
   network: string;
+  network_type?: string;
   enabled: boolean;
   peer: string;
   peer_groups: string[];
@@ -92,6 +93,7 @@ export interface Route {
   masquerade: boolean;
   groups: string[];
   keep_route: boolean;
+  skip_auto_apply?: boolean;
   domains?: string[];
   access_control_groups?: string[];
 }

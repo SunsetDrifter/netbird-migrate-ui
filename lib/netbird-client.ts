@@ -215,7 +215,9 @@ export class NetBirdClient {
     masquerade: boolean;
     groups: string[];
     keep_route: boolean;
+    skip_auto_apply?: boolean;
     domains?: string[];
+    access_control_groups?: string[];
   }): Promise<Route> {
     return this.request<Route>("POST", "/routes", data);
   }
